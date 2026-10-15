@@ -34,7 +34,7 @@ public class MSECommand implements CommandExecutor {
                 };
 
                 if (targetInventory != null) {
-                    Scheduler.runTaskAtEntity(player, () -> player.openInventory(targetInventory), null);
+                    Scheduler.runTask(() -> player.openInventory(targetInventory));
                     return true;
                 }
             }

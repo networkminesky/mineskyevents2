@@ -1,92 +1,103 @@
 package net.mineskyevents;
 
-import com.mongodb.client.MongoCollection;
 import net.mineskyevents.commands.EventCommand;
 import net.mineskyevents.commands.MSECommand;
-import net.mineskyevents.database.MongoDBManager;
 import net.mineskyevents.entities.categories.CategoryHandler;
 import net.mineskyevents.gui.CategoryGuiListener;
 import net.mineskyevents.gui.EventGui;
-import net.mineskyevents.listeners.EventListener;
-import net.mineskyevents.listeners.PlayerEvents;
+import net.mineskyevents.listeners.GameplayListener;
+import net.mineskyevents.listeners.PlayerConnectionListener;
 import net.mineskyevents.managers.EventManager;
+import net.mineskyevents.managers.ScheduleManager;
+import net.mineskyevents.proxy.ProxyService;
+import net.mineskyevents.reward.RewardService;
+import net.mineskyevents.utils.Messages;
 import net.mineskyevents.utils.Scheduler;
-import org.bson.Document;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.util.logging.Logger;
 
 public final class MineSkyEvents extends JavaPlugin {
+
     public static Logger l;
 
-    public MongoDBManager mm;
-    public MongoCollection<Document> coll;
-
     private EventManager eventManager;
+    private ScheduleManager scheduleManager;
+    private ProxyService proxyService;
+    private RewardService rewardService;
+    private FileConfiguration messagesConfig;
 
     @Override
     public void onEnable() {
-        l = this.getLogger();
-        l.info("    __  ___    _                           __               ______                        __         ");
-        l.info("   /  |/  /   (_)   ____   ___    _____   / /__   __  __   / ____/ _   __  ___    ____   / /_   _____");
-        l.info("  / /|_/ /   / /   / __ \\ / _ \\  / ___/  / //_/  / / / /  / __/   | | / / / _ \\  / __ \\ / __/  / ___/");
-        l.info(" / /  / /   / /   / / / //  __/ (__  )  / ,<    / /_/ /  / /___   | |/ / /  __/ / / / // /_   (__  )");
-        l.info("/_/  /_/   /_/   /_/ /_/ \\___/ /____/  /_/|_|   \\__, /  /_____/   |___/  \\___/ /_/ /_/ \\__/  /____/  ");
-        l.info("                                               /____/");
-        l.info("");
-        l.info("Carregando plugin...");
+        l = getLogger();
+        logBanner();
+
+        saveDefaultConfig();
+        saveResource("categories.yml", false);
+        saveResource("messages.yml", false);
+
+        messagesConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
+        Messages.init(messagesConfig);
+
         Scheduler.init(this);
-        //loadMongoDB();
+
         CategoryHandler.setupCategories();
+
+        eventManager = new EventManager();
+        proxyService = new ProxyService(this);
+        proxyService.register();
+        rewardService = new RewardService(proxyService);
+
+        scheduleManager = new ScheduleManager(this, eventManager);
+        scheduleManager.start();
+
         registerCommands();
-        registerEvents();
-        GUISLoad();
-        this.eventManager = new EventManager();
-        getServer().getMessenger().registerOutgoingPluginChannel(this, "minesky:proxy");
-        l.info("Plugin habilitado com sucesso!");
+        registerListeners();
+        EventGui.loadAll();
+
+        l.info("MineSkyEvents habilitado com sucesso! (Paper 26.2)");
     }
 
     @Override
     public void onDisable() {
-        l.info("GoodBye! Shutting down");
-        mm.close();
+        if (scheduleManager != null) scheduleManager.stop();
+        if (eventManager != null && eventManager.hasActiveEvent()) {
+            eventManager.forceStop();
+        }
+        if (proxyService != null) proxyService.unregister();
+        l.info("MineSkyEvents desabilitado.");
     }
 
-    private void registerEvents() {
-        l.info("Registering event listeners...");
-        getServer().getPluginManager().registerEvents(new PlayerEvents(), this);
+    private void registerListeners() {
+        getServer().getPluginManager().registerEvents(new PlayerConnectionListener(), this);
+        getServer().getPluginManager().registerEvents(new GameplayListener(), this);
         getServer().getPluginManager().registerEvents(new CategoryGuiListener(), this);
-        getServer().getPluginManager().registerEvents(new EventListener(), this);
     }
 
     private void registerCommands() {
-        l.info("Registering plugin commands...");
-        this.getCommand("event").setExecutor(new EventCommand(this));
-        this.getCommand("mse").setExecutor(new MSECommand());
+        getCommand("evento").setExecutor(new EventCommand(this));
+        getCommand("evento").setTabCompleter(new net.mineskyevents.commands.tabcompleter.EventCommandTabCompleter());
+        getCommand("mse").setExecutor(new MSECommand());
     }
 
-    private void GUISLoad() {
-        l.info("Carregando todos os menus");
-        EventGui.loadAll();
+    private void logBanner() {
+        l.info("  __  __ _             ____  _        ");
+        l.info(" |  \\/  (_)_ __   ___ / ___|| | _____ ");
+        l.info(" | |\\/| | | '_ \\ / _ \\\\___ \\| |/ / _ \\");
+        l.info(" | |  | | | | | |  __/ ___) |   <  __/");
+        l.info(" |_|  |_|_|_| |_|\\___||____/|_|\\_\\___|");
+        l.info(" Servidor dedicado de eventos — Paper 26.2");
     }
 
-    public void loadMongoDB() {
-        if (mm != null) {
-            mm.close();
-        }
-        l.info("Connecting MongoDB...");
-
-        mm = new MongoDBManager();
-        mm.connect("mongodb+srv://zbruno:YJHIhrG740G5tChT@me21db.jecbxit.mongodb.net/", "events");
-        //mm.connect(Config.MongoUri, Config.StorageDatabase);
-        coll = mm.getEventos();
-    }
-
-    public EventManager getEventManager() {
-        return this.eventManager;
-    }
+    public EventManager getEventManager() { return eventManager; }
+    public ProxyService getProxyService() { return proxyService; }
+    public RewardService getRewardService() { return rewardService; }
+    public FileConfiguration getMessagesConfig() { return messagesConfig; }
 
     public static MineSkyEvents getInstance() {
-        return MineSkyEvents.getPlugin(MineSkyEvents.class);
+        return getPlugin(MineSkyEvents.class);
     }
 }

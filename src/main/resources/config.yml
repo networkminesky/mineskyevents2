@@ -1,0 +1,15 @@
+# MineSkyEvents - Configuração principal
+# Servidor dedicado de eventos (um mundo, sem inventário persistente)
+
+timezone: America/Sao_Paulo
+min-players: 2
+signup-timeout-seconds: 600
+countdown-seconds: 60
+weekend-schedule-enabled: false
+
+proxy:
+  channel: minesky:proxy
+  server-name: eventos
+
+rewards:
+  scale-by-players: true

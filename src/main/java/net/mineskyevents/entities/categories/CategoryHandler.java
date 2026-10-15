@@ -40,16 +40,11 @@ public class CategoryHandler {
     }
 
     public static void setupCategories() {
-        configuration = YamlConfiguration.loadConfiguration(file);
         if (!file.exists()) {
-            try {
-                MineSkyEvents.l.info("Arquivo categories.yml criado!");
-                configuration.save(file);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            MineSkyEvents.getInstance().saveResource("categories.yml", false);
         }
         eventFolder.mkdirs();
+        configuration = YamlConfiguration.loadConfiguration(file);
 
         configuration = YamlConfiguration.loadConfiguration(file);
 

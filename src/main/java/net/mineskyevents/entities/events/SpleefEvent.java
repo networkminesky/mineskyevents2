@@ -1,6 +1,7 @@
 package net.mineskyevents.entities.events;
 
 import net.mineskyevents.entities.categories.Category;
+import net.mineskyevents.models.EventType;
 import net.mineskyevents.utils.EventItems;
 import net.mineskyevents.utils.Scheduler;
 import org.bukkit.Bukkit;
@@ -16,38 +17,30 @@ public class SpleefEvent extends BaseEvent {
 
     public static final Map<Location, Material> brokenBlocks = new ConcurrentHashMap<>();
 
-    public SpleefEvent(Category category, String mapId) {
-        super(category, mapId, "Spleef");
+    public SpleefEvent(EventType type, Category category, String mapId) {
+        super(type, category, mapId);
     }
 
     @Override
     protected void onGameStart() {
         for (UUID uuid : alivePlayers) {
             Player p = Bukkit.getPlayer(uuid);
-            if (p != null && p.isOnline()) {
-                Scheduler.runTaskAtEntity(p, () -> {
-                    p.getInventory().clear();
-                    p.getInventory().addItem(EventItems.Shovel());
-                });
+            if (p != null) {
+                giveKit(p);
+                p.getInventory().addItem(EventItems.Shovel());
             }
         }
     }
 
     @Override
-    protected void onPlayerDeath(Player player) {
-        alivePlayers.remove(player.getUniqueId());
-        deadPlayers.add(player.getUniqueId());
-
-        if (alivePlayers.size() <= 1) {
-            resetEvent();
-        }
+    protected void onPlayerEliminated(Player player) {
+        // handled by checkWinCondition
     }
 
     @Override
     protected void onCleanUp() {
-        brokenBlocks.forEach((location, material) ->
-                Scheduler.runTaskAtLocation(location, () -> location.getBlock().setType(material))
-        );
+        brokenBlocks.forEach((loc, mat) ->
+                Scheduler.runTask(() -> loc.getBlock().setType(mat)));
         brokenBlocks.clear();
     }
 }

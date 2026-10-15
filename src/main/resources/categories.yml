@@ -1,14 +1,3 @@
-capture-the-flag:
-  name: Capture a Bandeira
-  display-item: ORANGE_BANNER
-  optional-options:
-    restore-arena:
-      type: BOOLEAN
-      default-enabled: true
-      display-name: Restaurar a arena
-      description:
-        - Restaurar a arena automaticamente após o término do evento.
-
 spleef:
   name: Spleef
   display-item: GOLDEN_SHOVEL
@@ -20,30 +9,42 @@ spleef:
       description:
         - Restaurar a arena automaticamente após o término do evento.
 
-brickwars:
-  name: TijolãoWars
+tijolao-wars:
+  name: Tijolão Wars
   display-item: BRICKS
 
-race:
-  name: Corrida
-  display-item: POTION
+runners:
+  name: Runners
+  display-item: MOSSY_STONE_BRICKS
 
-tntrun:
-  name: TNT-RUN
+corrida:
+  name: Corrida
+  display-item: LEATHER_BOOTS
+
+corrida-barco:
+  name: Corrida de Barco
+  display-item: JUNGLE_BOAT
+
+tnt-run:
+  name: TNT RUN
   display-item: TNT
 
-boat-race:
-  name: Corrida de barco
-  display-item: JUNGLE_BOAT
+tnt-tag:
+  name: TNT TAG
+  display-item: MINECART_TNT
 
 sumo:
   name: Sumo
   display-item: STICK
 
-tnttag:
-  name: TNTTag
-  display-item: MINECART_TNT
+corrida-elytra:
+  name: Corrida de Elytra
+  display-item: ELYTRA
 
-glider-race:
-  name: Corrida de parapente
-  display-item: SHULKER
+mini-wars:
+  name: Mini Wars
+  display-item: CROSSBOW
+
+esconde-esconde:
+  name: Esconde-Esconde
+  display-item: PLAYER_HEAD

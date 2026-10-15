@@ -96,7 +96,7 @@ public class Utils {
 
             e.setCancelled(true);
 
-            Scheduler.runTaskAtEntity(e.getPlayer(), () -> {
+            Scheduler.runTask(() -> {
                 String msg = e.getMessage();
 
                 if (msg.equalsIgnoreCase("cancel") || msg.equalsIgnoreCase("cancelar") ||

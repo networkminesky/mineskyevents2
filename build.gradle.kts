@@ -5,11 +5,12 @@ plugins {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://maven.enginehub.org/repo/")
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.2.build.+")
-    compileOnly("org.mongodb:mongodb-driver-sync:4.10.2")
+    compileOnly("io.papermc.paper:paper-api:26.2.build.121-stable")
+    compileOnly("com.sk89q.worldedit:worldedit-bukkit:7.3.10")
 }
 
 java {

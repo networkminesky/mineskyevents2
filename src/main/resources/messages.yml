@@ -1,0 +1,29 @@
+prefix: "<gradient:#00d4ff:#7b2ff7><bold>MineSky</bold></gradient> <dark_gray>»</dark_gray> "
+
+event:
+  announced: "{prefix}<gradient:#4ade80:#22d3ee>O evento <white><bold>{event}</bold></white> foi anunciado!</gradient>\n<gray>Mapa: <white>{map}</white> · Use <white>/evento entrar</white> para participar!</gray>"
+  description: "{prefix}<gray>{description}</gray>"
+  countdown: "<gradient:#fbbf24:#f97316>Iniciando em <white><bold>{seconds}s</bold></white>...</gradient>"
+  started: "{prefix}<gradient:#4ade80:#22d3ee><bold>O evento começou!</bold></gradient> <gray>Boa sorte a todos!</gray>"
+  cancelled: "{prefix}<red>O evento foi cancelado por falta de jogadores.</red>"
+  winner: "{prefix}<gradient:#fbbf24:#f97316><bold>{player}</bold></gradient> <gray>venceu o evento <white>{event}</white>!</gray>"
+  placement: "{prefix}<gray>{place}º lugar: <white>{player}</white> — <green>${amount}</green></gray>"
+  player-joined: "<gray>{player}</gray> <yellow>entrou no evento!</yellow> <dark_gray>({count} jogadores)</dark_gray>"
+  player-left: "<gray>{player}</gray> <red>saiu do evento.</red>"
+  stopped: "{prefix}<red>O evento foi encerrado por um administrador.</red>"
+
+errors:
+  no-event: "{prefix}<red>Não há nenhum evento ativo no momento.</red>"
+  already-joined: "{prefix}<red>Você já está participando deste evento.</red>"
+  event-running: "{prefix}<red>O evento já começou! Não é possível entrar agora.</red>"
+  no-permission: "{prefix}<red>Você não tem permissão para isso.</red>"
+  server-closed: "{prefix}<red>O servidor de eventos está fechado. Aguarde o próximo evento!</red>"
+  map-not-found: "{prefix}<red>Mapa <white>{map}</white> não encontrado.</red>"
+
+admin:
+  map-saved: "{prefix}<green>Ponto <white>{point}</white> salvo no mapa <white>{map}</white>!</green>"
+  map-created: "{prefix}<green>Mapa <white>{map}</white> criado para <white>{event}</white>!</green>"
+  region-saved: "{prefix}<green>Região do mapa <white>{map}</white> salva via WorldEdit!</green>"
+  event-started: "{prefix}<green>Evento <white>{event}</white> iniciado no mapa <white>{map}</white>!</green>"
+  event-stopped: "{prefix}<yellow>Evento encerrado.</yellow>"
+  no-worldedit: "{prefix}<red>WorldEdit não está instalado ou você não tem seleção ativa.</red>"

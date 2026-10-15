@@ -1,18 +1,38 @@
-name: MineSkyEvents2
+name: MineSkyEvents
 version: '${version}'
-
 main: net.mineskyevents.MineSkyEvents
-api-version: '26.1'
+api-version: '26.2'
 load: POSTWORLD
-folia-supported: true
 
-authors: [ Bruno C. ]
+authors: [ Bruno C., MineSky ]
 
-libraries:
-  - org.mongodb:mongodb-driver-sync:4.10.2
+description: Servidor dedicado de eventos MineSky com integração ao MineSkyProxy.
+
+softdepend:
+  - WorldEdit
 
 commands:
+  evento:
+    aliases: [event, eventos, events]
+    description: Comandos de participação nos eventos.
   mse:
     aliases: [mineskyevents]
-  event:
-    aliases: [evento,eventos,events]
+    description: Comandos administrativos do MineSkyEvents.
+
+permissions:
+  mineskyevents.join:
+    description: Permite entrar no servidor de eventos quando há um evento ativo.
+    default: true
+  mineskyevents.bypass:
+    description: Permite entrar no servidor mesmo sem evento ativo (staff).
+    default: op
+  mineskyevents.admin:
+    description: Comandos administrativos de eventos e mapas.
+    default: op
+  mineskyevents.*:
+    description: Todas as permissões do MineSkyEvents.
+    default: op
+    children:
+      mineskyevents.join: true
+      mineskyevents.bypass: true
+      mineskyevents.admin: true

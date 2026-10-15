@@ -1,107 +1,58 @@
 package net.mineskyevents.commands.tabcompleter;
 
-import net.mineskyevents.utils.Utils;
+import net.mineskyevents.models.EventType;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class EventCommandTabCompleter implements TabCompleter {
-    private final List<String> id = Arrays.asList("anunciar", "blacklist", "entrar", "kick", "set", "start", "finalizar");
-    private final List<String> names = Arrays.asList("Spleef", "TijolãoWars", "Corrida", "TNTRun", "CorridaBoat", "Sumo", "TNTTag", "Parapente", "CaptureBandeira");
-    private final List<String> namesA = Arrays.asList("Mini-Wars", "Esconde-esconde", "Ruínas", "CopaPVP");
-    private final List<String> namesF = new ArrayList<>();
 
     @Override
-    public List<String> onTabComplete(CommandSender s, Command cmd, String lbl, String[] args) {
-        namesF.addAll(namesA);
-        namesF.addAll(names);
-        List<String> completions = new ArrayList<>();
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
+                                                 @NotNull String alias, @NotNull String[] args) {
+        if (!sender.hasPermission("mineskyevents.admin") && !sender.hasPermission("mineskyevents.join")) {
+            return List.of();
+        }
 
         if (args.length == 1) {
-            completions = getMatches(args[0], id);
-            if (args[0].isEmpty()) {
-                completions.clear();
-                addIfPermitted(s, completions, "mineskyevents.command.event.anunciar", "anunciar");
-                addIfPermitted(s, completions, "mineskyevents.command.event.blacklist", "blacklist");
-                completions.add("entrar");
-                addIfPermitted(s, completions, "mineskyevents.command.event.kick", "kick");
-                addIfPermitted(s, completions, "mineskyevents.command.event.set", "set");
-                addIfPermitted(s, completions, "mineskyevents.command.event.start", "start");
-                addIfPermitted(s, completions, "mineskyevents.command.event.finalizar", "finalizar");
+            List<String> subs = new ArrayList<>(List.of("entrar", "ajuda"));
+            if (sender.hasPermission("mineskyevents.admin")) {
+                subs.addAll(List.of("start", "stop", "criar", "mapa", "sair"));
             }
-        } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("blacklist")) {
-                completions = getMatches(args[1], Arrays.asList("Adicionar", "Remover"), s, "mineskyevents.command.event.blacklist");
-            } else if (args[0].equalsIgnoreCase("start")) {
-                completions = getMatches(args[1], names, s, "mineskyevents.command.event.start");
-            } else if (args[0].equalsIgnoreCase("set") || args[0].equalsIgnoreCase("anunciar")) {
-                completions = getMatches(args[1], namesF, s, "mineskyevents.command.event." + args[0]);
-            } else if (args[0].equalsIgnoreCase("finalizar")) {
-                completions = getMatches(args[1], namesF, s, "mineskyevents.command.event.finalizar");
-            } else if (args[0].equalsIgnoreCase("kick")) {
-                //completions = getMatches(args[1], Util.PVE(), s, "mineskyevents.command.event.kick");
-            }
-        } else if (args.length == 3) {
-            if (args[0].equalsIgnoreCase("anunciar")) {
-                completions.clear();
-                if (!s.hasPermission("mineskyevents.command.event.anunciar")) return completions;
-                switch (args[2]) {
-                    case "Mini-Wars":
-                        completions.addAll(Arrays.asList("1", "2", "3", "4", "5"));
-                        break;
-                    case "CopaPVP":
-                        completions.add("1");
-                        break;
-                    case "Esconde-Esconde":
-                        completions.addAll(Arrays.asList("1", "2"));
-                        break;
-                    case "Ruínas":
-                        completions.add("1");
-                        break;
-                    default:
-                        break;
+            return filter(subs, args[0]);
+        }
+
+        if (args.length >= 2 && sender.hasPermission("mineskyevents.admin")) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("start") || sub.equals("iniciar")) {
+                if (args.length == 2) {
+                    return filter(Arrays.stream(EventType.values()).map(EventType::getId).collect(Collectors.toList()), args[1]);
                 }
-            } else if (args[0].equalsIgnoreCase("set")) {
-                completions = Arrays.asList("spawn", "arena");
-            } else if (args[0].equalsIgnoreCase("blacklist")) {
-                completions = getMatches(args[2], names, s, "mineskyevents.command.event.blacklist");
             }
-        } else if (args.length == 4) {
-            if (args[0].equalsIgnoreCase("blacklist")) {
-                completions = getMatches(args[3], Utils.getOnlinePlayerNames());
-            } else if (args[0].equalsIgnoreCase("set")) {
-                completions = Arrays.asList("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
-            }
-        } else if (args.length == 5 && args[0].equalsIgnoreCase("blacklist")) {
-            completions = Arrays.asList("IP");
-        }
-
-        return completions;
-    }
-
-    private List<String> getMatches(String input, List<String> possibilities) {
-        List<String> matches = new ArrayList<>();
-        String inputLowerCase = input.toLowerCase();
-        for (String possibility : possibilities) {
-            if (possibility.toLowerCase().startsWith(inputLowerCase)) {
-                matches.add(possibility);
+            if (sub.equals("mapa") || sub.equals("map")) {
+                if (args.length == 2) return filter(List.of("criar", "ponto", "regiao"), args[1]);
+                if (args.length == 3) {
+                    return filter(Arrays.stream(EventType.values()).map(EventType::getId).collect(Collectors.toList()), args[2]);
+                }
+                if (args.length == 5 && (args[1].equals("ponto") || args[1].equals("point"))) {
+                    return filter(List.of("lobby", "spawn", "pos1", "pos2", "finish", "exit"), args[4]);
+                }
             }
         }
-        return matches;
+
+        return List.of();
     }
 
-    private List<String> getMatches(String input, List<String> possibilities, CommandSender sender, String permission) {
-        if (!sender.hasPermission(permission)) return new ArrayList<>();
-        return getMatches(input, possibilities);
-    }
-
-    private void addIfPermitted(CommandSender sender, List<String> completions, String permission, String command) {
-        if (sender.hasPermission(permission)) {
-            completions.add(command);
-        }
+    private List<String> filter(List<String> options, String input) {
+        return options.stream()
+                .filter(s -> s.toLowerCase().startsWith(input.toLowerCase()))
+                .collect(Collectors.toList());
     }
 }

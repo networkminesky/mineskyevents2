@@ -1,0 +1,61 @@
+package net.mineskyevents.entities.events;
+
+import net.mineskyevents.entities.categories.Category;
+import net.mineskyevents.models.EventType;
+import net.mineskyevents.utils.EventItems;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.entity.Boat;
+import org.bukkit.entity.Player;
+
+import java.util.*;
+
+public class CorridaBarcoEvent extends BaseEvent {
+
+    private final List<Player> finishOrder = new ArrayList<>();
+    private Location finishLine;
+
+    public CorridaBarcoEvent(EventType type, Category category, String mapId) {
+        super(type, category, mapId);
+    }
+
+    @Override
+    protected void onGameStart() {
+        finishLine = category.getConfig().contains("mapas." + mapId + ".finish")
+                ? net.mineskyevents.map.MapManager.loadLocation(category.getConfig(), "mapas." + mapId + ".finish")
+                : pos2Loc;
+
+        for (UUID uuid : alivePlayers) {
+            Player p = Bukkit.getPlayer(uuid);
+            if (p != null) {
+                giveKit(p);
+                p.getInventory().addItem(EventItems.Boat());
+            }
+        }
+    }
+
+    public void onFinish(Player player) {
+        if (finishOrder.contains(player)) return;
+        finishOrder.add(player);
+
+        if (finishOrder.size() >= 3 || finishOrder.size() >= alivePlayers.size()) {
+            finishEvent(finishOrder.subList(0, Math.min(3, finishOrder.size())));
+        }
+    }
+
+    public boolean isNearFinish(Player player) {
+        if (finishLine == null) return false;
+        return player.getLocation().distanceSquared(finishLine) < 9;
+    }
+
+    @Override
+    protected void onPlayerEliminated(Player player) {}
+
+    @Override
+    protected void onCleanUp() {
+        finishOrder.clear();
+        for (var world : Bukkit.getWorlds()) {
+            world.getEntitiesByClass(Boat.class).forEach(Boat::remove);
+        }
+    }
+}

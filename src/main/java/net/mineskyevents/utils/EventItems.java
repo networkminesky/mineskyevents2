@@ -423,7 +423,7 @@ public class EventItems {
     }
 
     public static void dropAllCustomItems(Player player) {
-        Scheduler.runTaskAtEntity(player, () -> {
+        Scheduler.runTask(() -> {
             Location loc = player.getLocation();
 
             List<ItemStack> itemsToDrop = List.of(

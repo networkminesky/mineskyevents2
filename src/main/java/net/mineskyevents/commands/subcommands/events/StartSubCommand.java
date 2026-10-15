@@ -1,59 +1,63 @@
 package net.mineskyevents.commands.subcommands.events;
 
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.commands.subcommands.SubCommand;
-import net.mineskyevents.entities.categories.Category;
-import net.mineskyevents.entities.categories.CategoryHandler;
-import net.mineskyevents.entities.events.SpleefEvent;
+import net.mineskyevents.map.MapManager;
+import net.mineskyevents.models.EventType;
+import net.mineskyevents.utils.Messages;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 public class StartSubCommand extends SubCommand {
+
     @Override
     public String getName() { return "start"; }
+
     @Override
-    public String getDescription() { return "Inicia um evento carregando um mapa específico."; }
+    public String getDescription() { return "Inicia um evento manualmente."; }
+
     @Override
-    public String getUsage() { return "/event start <mapa>"; }
+    public String getUsage() { return "/evento start <tipo> [mapa]"; }
+
     @Override
-    public List<String> getAliases() { return Collections.singletonList("iniciar"); }
+    public List<String> getAliases() { return List.of("iniciar"); }
+
     @Override
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
     public void perform(Player player, String[] args) {
-        if (args.length < 1) {
-            player.sendMessage("§cComo usar: " + getUsage());
+        if (args.length < 2) {
+            player.sendMessage("§cUso: " + getUsage());
             return;
         }
 
-        String mapId = args[1];
-        Category foundCategory = null;
-
-        for (Category category : CategoryHandler.categories) {
-            if (category.getConfig().contains("mapas." + mapId)) {
-                foundCategory = category;
-                break;
-            }
+        EventType type = EventType.fromId(args[1]);
+        if (type == null) {
+            type = Arrays.stream(EventType.values())
+                    .filter(t -> t.getDisplayName().equalsIgnoreCase(args[1]))
+                    .findFirst().orElse(null);
         }
 
-        if (foundCategory == null) {
-            player.sendMessage("§c[!] Erro: Nenhum mapa com o ID '" + mapId + "' foi encontrado.");
-            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_BREAK, 1.0f, 1.0f);
+        if (type == null) {
+            Messages.send(player, "errors.map-not-found", Placeholder.parsed("map", args[1]));
             return;
         }
 
-        String categoryId = foundCategory.getId();
-        if (categoryId.equalsIgnoreCase("spleef")) {
-            player.sendMessage("§aSpleef iniciado no mapa §l" + mapId + "§a!");
-
-            SpleefEvent spleef = new SpleefEvent(foundCategory, mapId);
-
-            MineSkyEvents.getInstance().getEventManager().setActiveEvent(spleef);
-            spleef.startSignups();
+        String mapId = args.length >= 3 ? args[2] : MapManager.getRandomMapId(type);
+        if (mapId == null) {
+            player.sendMessage("§cNenhum mapa configurado para " + type.getDisplayName());
+            return;
         }
+
+        MineSkyEvents.getInstance().getEventManager().startEvent(type, mapId, true);
+        Messages.send(player, "admin.event-started",
+                Placeholder.parsed("event", type.getDisplayName()),
+                Placeholder.parsed("map", mapId));
+        Messages.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1.0f);
     }
 }
