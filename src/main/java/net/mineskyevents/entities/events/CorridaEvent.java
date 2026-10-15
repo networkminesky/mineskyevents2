@@ -12,6 +12,16 @@ import java.util.*;
 
 public class CorridaEvent extends BaseEvent {
 
+    @Override
+    public boolean showsRemainingPlayers() { return false; }
+
+    @Override
+    public String formatPersonalScore(Player viewer) {
+        int cp = checkpointProgress.getOrDefault(viewer.getUniqueId(), 0);
+        int total = checkpoints.isEmpty() ? 1 : checkpoints.size();
+        return "§7Checkpoints: §f" + cp + "§7/§f" + total;
+    }
+
     private final Map<UUID, Integer> checkpointProgress = new HashMap<>();
     private final List<Player> finishOrder = new ArrayList<>();
     private Location finishLine;

@@ -79,6 +79,14 @@ public class TntTagEvent extends BaseEvent {
     public UUID getTaggedPlayer() { return taggedPlayer; }
 
     @Override
+    public List<String> extraScoreboardLines(Player viewer) {
+        if (taggedPlayer == null) return List.of();
+        Player tagged = Bukkit.getPlayer(taggedPlayer);
+        String name = tagged != null ? tagged.getName() : "?";
+        return List.of("§cCom TNT: §f" + name);
+    }
+
+    @Override
     protected void onPlayerEliminated(Player player) {
         if (player.getUniqueId().equals(taggedPlayer) && alivePlayers.size() > 1) {
             List<UUID> remaining = new ArrayList<>(alivePlayers);

@@ -15,6 +15,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SpleefEvent extends BaseEvent {
 
+    @Override
+    public boolean eliminatesOnVoid() { return true; }
+
+    @Override
+    public boolean usesSurvivalMode() { return true; }
+
+    @Override
+    public boolean canBreak(Material material) {
+        return material == Material.SNOW_BLOCK || material == Material.SNOW || material == Material.POWDER_SNOW;
+    }
+
     public static final Map<Location, Material> brokenBlocks = new ConcurrentHashMap<>();
 
     public SpleefEvent(EventType type, Category category, String mapId) {
@@ -22,13 +33,16 @@ public class SpleefEvent extends BaseEvent {
     }
 
     @Override
+    protected void giveKit(Player player) {
+        super.giveKit(player);
+        player.getInventory().addItem(EventItems.Shovel());
+    }
+
+    @Override
     protected void onGameStart() {
         for (UUID uuid : alivePlayers) {
             Player p = Bukkit.getPlayer(uuid);
-            if (p != null) {
-                giveKit(p);
-                p.getInventory().addItem(EventItems.Shovel());
-            }
+            if (p != null) giveKit(p);
         }
     }
 

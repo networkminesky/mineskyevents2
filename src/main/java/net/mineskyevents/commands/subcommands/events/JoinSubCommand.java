@@ -1,5 +1,6 @@
 package net.mineskyevents.commands.subcommands.events;
 
+import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.commands.subcommands.SubCommand;
@@ -43,17 +44,25 @@ public class JoinSubCommand extends SubCommand {
             return;
         }
 
+        var ban = MineSkyEvents.getInstance().getBanManager().check(player.getUniqueId(), player.getName());
+        if (ban != null) {
+            Messages.send(player, ban.permanent() ? "errors.banned" : "errors.tempbanned",
+                    Placeholder.component("reason", Component.text(ban.reason())),
+                    Placeholder.parsed("time", ban.remainingLabel()));
+            return;
+        }
+
         if (manager.isPlaying(player)) {
             Messages.send(player, "errors.already-joined");
             return;
         }
 
-        if (manager.getState() == EventState.RUNNING) {
-            Messages.send(player, "errors.event-running");
+        BaseEvent activeEvent = manager.getActiveEvent();
+        if (activeEvent != null && manager.getState() == EventState.RUNNING) {
+            activeEvent.joinInProgress(player);
             return;
         }
 
-        BaseEvent activeEvent = manager.getActiveEvent();
         if (activeEvent == null) {
             Messages.send(player, "errors.no-event");
             return;

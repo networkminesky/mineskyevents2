@@ -10,6 +10,15 @@ import java.util.UUID;
 
 public class SumoEvent extends BaseEvent {
 
+    @Override
+    public boolean eliminatesOnVoid() { return true; }
+
+    @Override
+    public boolean allowsPlayerVsPlayer() { return true; }
+
+    @Override
+    public boolean usesSurvivalMode() { return true; }
+
     public SumoEvent(EventType type, Category category, String mapId) {
         super(type, category, mapId);
     }

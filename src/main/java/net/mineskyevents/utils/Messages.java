@@ -29,7 +29,8 @@ public final class Messages {
     public static Component parse(String template, TagResolver... resolvers) {
         String prefix = config.getString("prefix", "");
         String withPrefix = template.replace("{prefix}", prefix);
-        return MINI.deserialize(withPrefix, resolvers);
+        String miniMessage = withPrefix.replaceAll("\\{([a-zA-Z0-9_-]+)\\}", "<$1>");
+        return MINI.deserialize(miniMessage, resolvers);
     }
 
     public static void send(CommandSender sender, String key, TagResolver... resolvers) {

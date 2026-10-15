@@ -61,6 +61,7 @@ server.sendPluginMessage(MINECRAFT_CHANNEL, out.toByteArray());
 | `REWARD` | `playerName`, `amount`, `eventId`, `placement` | Crédito de recompensa |
 | `EVENT_STATUS` | `eventId`, `state`, `players` | Status periódico (opcional) |
 | `PONG` | `serverName` | Resposta ao PING |
+| `CONNECT_HUB` | `playerName`, `targetServer` | Jogador pediu saída (`/sair`) — proxy deve mover ao hub |
 
 ### Exemplo REWARD (Paper envia)
 

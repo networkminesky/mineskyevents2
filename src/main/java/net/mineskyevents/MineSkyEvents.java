@@ -5,9 +5,13 @@ import net.mineskyevents.commands.MSECommand;
 import net.mineskyevents.entities.categories.CategoryHandler;
 import net.mineskyevents.gui.CategoryGuiListener;
 import net.mineskyevents.gui.EventGui;
+import net.mineskyevents.commands.LeaveCommand;
+import net.mineskyevents.listeners.CommandBlockerListener;
 import net.mineskyevents.listeners.GameplayListener;
 import net.mineskyevents.listeners.PlayerConnectionListener;
+import net.mineskyevents.managers.EventBanManager;
 import net.mineskyevents.managers.EventManager;
+import net.mineskyevents.managers.EventScoreboardManager;
 import net.mineskyevents.managers.ScheduleManager;
 import net.mineskyevents.proxy.ProxyService;
 import net.mineskyevents.reward.RewardService;
@@ -18,6 +22,8 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;
 
 public final class MineSkyEvents extends JavaPlugin {
@@ -25,9 +31,12 @@ public final class MineSkyEvents extends JavaPlugin {
     public static Logger l;
 
     private EventManager eventManager;
+    private EventScoreboardManager scoreboardManager;
     private ScheduleManager scheduleManager;
+    private CommandBlockerListener commandBlockerListener;
     private ProxyService proxyService;
     private RewardService rewardService;
+    private EventBanManager banManager;
     private FileConfiguration messagesConfig;
 
     @Override
@@ -40,6 +49,13 @@ public final class MineSkyEvents extends JavaPlugin {
         saveResource("messages.yml", false);
 
         messagesConfig = YamlConfiguration.loadConfiguration(new File(getDataFolder(), "messages.yml"));
+        try (var reader = new InputStreamReader(getResource("messages.yml"), StandardCharsets.UTF_8)) {
+            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(reader);
+            messagesConfig.setDefaults(defaults);
+            messagesConfig.options().copyDefaults(true);
+        } catch (Exception e) {
+            l.warning("Não foi possível carregar os padrões de messages.yml: " + e.getMessage());
+        }
         Messages.init(messagesConfig);
 
         Scheduler.init(this);
@@ -47,6 +63,8 @@ public final class MineSkyEvents extends JavaPlugin {
         CategoryHandler.setupCategories();
 
         eventManager = new EventManager();
+        banManager = new EventBanManager(this);
+        scoreboardManager = new EventScoreboardManager();
         proxyService = new ProxyService(this);
         proxyService.register();
         rewardService = new RewardService(proxyService);
@@ -75,11 +93,15 @@ public final class MineSkyEvents extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(), this);
         getServer().getPluginManager().registerEvents(new CategoryGuiListener(), this);
+        commandBlockerListener = new CommandBlockerListener();
+        commandBlockerListener.reload();
+        getServer().getPluginManager().registerEvents(commandBlockerListener, this);
     }
 
     private void registerCommands() {
         getCommand("evento").setExecutor(new EventCommand(this));
         getCommand("evento").setTabCompleter(new net.mineskyevents.commands.tabcompleter.EventCommandTabCompleter());
+        getCommand("sair").setExecutor(new LeaveCommand());
         getCommand("mse").setExecutor(new MSECommand());
     }
 
@@ -93,9 +115,11 @@ public final class MineSkyEvents extends JavaPlugin {
     }
 
     public EventManager getEventManager() { return eventManager; }
+    public EventScoreboardManager getScoreboardManager() { return scoreboardManager; }
     public ProxyService getProxyService() { return proxyService; }
     public RewardService getRewardService() { return rewardService; }
     public FileConfiguration getMessagesConfig() { return messagesConfig; }
+    public EventBanManager getBanManager() { return banManager; }
 
     public static MineSkyEvents getInstance() {
         return getPlugin(MineSkyEvents.class);

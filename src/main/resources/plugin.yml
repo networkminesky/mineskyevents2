@@ -15,6 +15,9 @@ commands:
   evento:
     aliases: [event, eventos, events]
     description: Comandos de participação nos eventos.
+  sair:
+    aliases: [voltar, leave]
+    description: Sai do evento e retorna ao servidor principal.
   mse:
     aliases: [mineskyevents]
     description: Comandos administrativos do MineSkyEvents.

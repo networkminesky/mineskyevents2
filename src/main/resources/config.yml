@@ -10,6 +10,25 @@ weekend-schedule-enabled: false
 proxy:
   channel: minesky:proxy
   server-name: eventos
+  hub-server: lobby
+
+# Comandos bloqueados para jogadores sem mineskyevents.admin (raiz do comando, sem /)
+blocked-commands:
+  - pl
+  - plugins
+  - plugin
+  - about
+  - version
+  - ver
+  - bukkit
+  - spigot
+  - paper
+  - icanhasbukkit
+  - "?"
+
+tijolao:
+  throw-cooldown-ms: 800
+  brick-damage: 4.0
 
 rewards:
   scale-by-players: true

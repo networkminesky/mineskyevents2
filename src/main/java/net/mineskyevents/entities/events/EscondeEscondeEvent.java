@@ -91,6 +91,18 @@ public class EscondeEscondeEvent extends BaseEvent {
     }
 
     @Override
+    public List<String> extraScoreboardLines(Player viewer) {
+        List<String> lines = new ArrayList<>();
+        lines.add("§7Escondidos: §f" + hiders.size());
+        if (isHider(viewer)) {
+            lines.add("§aVocê está escondido");
+        } else if (isSeeker(viewer)) {
+            lines.add("§cVocê é o pegador");
+        }
+        return lines;
+    }
+
+    @Override
     protected void onPlayerEliminated(Player player) {
         if (seekers.size() == 1 && hiders.contains(player.getUniqueId())) {
             // hider caught - checked in catchPlayer

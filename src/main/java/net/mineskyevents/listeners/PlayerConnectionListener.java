@@ -1,6 +1,9 @@
 package net.mineskyevents.listeners;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.mineskyevents.MineSkyEvents;
+import net.mineskyevents.map.MapManager;
 import net.mineskyevents.managers.EventManager;
 import net.mineskyevents.models.EventState;
 import net.mineskyevents.utils.Messages;
@@ -19,26 +22,52 @@ public class PlayerConnectionListener implements Listener {
         Player player = event.getPlayer();
         EventManager manager = MineSkyEvents.getInstance().getEventManager();
 
+        event.joinMessage(null);
+
         player.getInventory().clear();
         player.setGameMode(GameMode.ADVENTURE);
         player.setHealth(player.getMaxHealth());
         player.setFoodLevel(20);
 
+        var ban = MineSkyEvents.getInstance().getBanManager().check(player.getUniqueId(), player.getName());
+        if (ban != null) {
+            String key = ban.permanent() ? "errors.banned" : "errors.tempbanned";
+            player.kick(Messages.parse(
+                    MineSkyEvents.getInstance().getMessagesConfig().getString(key, key),
+                    Placeholder.component("reason", Component.text(ban.reason())),
+                    Placeholder.parsed("time", ban.remainingLabel())
+            ));
+            return;
+        }
+
         if (!manager.hasActiveEvent() && !player.hasPermission("mineskyevents.bypass")) {
-            event.setJoinMessage(null);
             String template = MineSkyEvents.getInstance().getMessagesConfig()
                     .getString("errors.server-closed", "<red>Servidor de eventos fechado.</red>");
             player.kick(Messages.parse(template));
             return;
         }
 
-        if (manager.getState() == EventState.WAITING && player.hasPermission("mineskyevents.join")) {
-            Messages.send(player, "event.announced");
+        if (manager.getState() == EventState.RUNNING && manager.getActiveEvent() != null
+                && player.hasPermission("mineskyevents.join")) {
+            manager.getActiveEvent().joinInProgress(player);
+            return;
+        }
+
+        if (manager.getState() == EventState.WAITING && player.hasPermission("mineskyevents.join")
+                && manager.getActiveEvent() != null) {
+            var active = manager.getActiveEvent();
+            String mapName = MapManager.getMapDisplayName(
+                    net.mineskyevents.entities.categories.CategoryHandler.getCategoryById(active.getEventType().getId()),
+                    active.getMapId());
+            Messages.send(player, "event.announced",
+                    Placeholder.parsed("event", active.getEventName()),
+                    Placeholder.parsed("map", mapName != null ? mapName : active.getMapId()));
         }
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
+        event.quitMessage(null);
         Player player = event.getPlayer();
         EventManager manager = MineSkyEvents.getInstance().getEventManager();
 

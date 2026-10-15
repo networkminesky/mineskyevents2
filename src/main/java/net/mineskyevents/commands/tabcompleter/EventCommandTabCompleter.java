@@ -1,6 +1,7 @@
 package net.mineskyevents.commands.tabcompleter;
 
 import net.mineskyevents.models.EventType;
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
@@ -24,7 +25,7 @@ public class EventCommandTabCompleter implements TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("entrar", "ajuda"));
             if (sender.hasPermission("mineskyevents.admin")) {
-                subs.addAll(List.of("start", "stop", "criar", "mapa", "sair"));
+                subs.addAll(List.of("start", "stop", "forcestart", "criar", "mapa", "sair", "kick", "ban", "tempban"));
             }
             return filter(subs, args[0]);
         }
@@ -34,6 +35,14 @@ public class EventCommandTabCompleter implements TabCompleter {
             if (sub.equals("start") || sub.equals("iniciar")) {
                 if (args.length == 2) {
                     return filter(Arrays.stream(EventType.values()).map(EventType::getId).collect(Collectors.toList()), args[1]);
+                }
+            }
+            if (sub.equals("kick") || sub.equals("ban") || sub.equals("tempban")) {
+                if (args.length == 2) {
+                    return filter(Bukkit.getOnlinePlayers().stream().map(org.bukkit.entity.Player::getName).toList(), args[1]);
+                }
+                if (sub.equals("tempban") && args.length == 3) {
+                    return filter(List.of("10m", "30m", "1h", "12h", "1d"), args[2]);
                 }
             }
             if (sub.equals("mapa") || sub.equals("map")) {

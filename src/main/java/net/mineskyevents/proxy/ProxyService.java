@@ -117,6 +117,19 @@ public class ProxyService implements PluginMessageListener {
         send(ProxyMessageType.PONG, out -> out.writeUTF(plugin.getServer().getName()));
     }
 
+    /**
+     * Pede ao proxy que mova o jogador para o servidor hub (lobby).
+     */
+    public void sendPlayerToHub(Player player) {
+        String hub = plugin.getConfig().getString("proxy.hub-server", "lobby");
+        ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        out.writeUTF(ProxyMessageType.CONNECT_HUB.name());
+        out.writeUTF(player.getName());
+        out.writeUTF(hub);
+        player.sendPluginMessage(plugin, CHANNEL, out.toByteArray());
+        logger.fine("CONNECT_HUB solicitado para " + player.getName() + " -> " + hub);
+    }
+
     private void send(ProxyMessageType type, MessageWriter writer) {
         ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF(type.name());

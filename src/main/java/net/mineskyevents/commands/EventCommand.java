@@ -28,7 +28,11 @@ public class EventCommand implements CommandExecutor {
                 new StopSubCommand(),
                 new MapSubCommand(),
                 new JoinSubCommand(),
-                new LeaveSubCommand()
+                new LeaveSubCommand(),
+                new ForceStartSubCommand(),
+                new KickSubCommand(),
+                new BanSubCommand(),
+                new TempBanSubCommand()
         ).forEach(subCommands::add);
     }
 

@@ -15,6 +15,9 @@ import java.util.*;
 
 public class TntRunEvent extends BaseEvent {
 
+    @Override
+    public boolean eliminatesOnVoid() { return true; }
+
     private final Set<Location> scheduledBreaks = new HashSet<>();
     private Scheduler.Task floorTask;
 

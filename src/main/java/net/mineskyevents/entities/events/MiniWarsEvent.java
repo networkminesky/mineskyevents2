@@ -13,6 +13,9 @@ import java.util.*;
 
 public class MiniWarsEvent extends BaseEvent {
 
+    @Override
+    public boolean allowsPlayerVsPlayer() { return true; }
+
     private static final Color[] TEAM_COLORS = {
             Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW
     };

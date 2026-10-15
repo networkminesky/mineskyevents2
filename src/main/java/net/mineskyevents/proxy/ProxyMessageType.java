@@ -13,7 +13,9 @@ public enum ProxyMessageType {
     EVENT_CANCELLED,
     REWARD,
     EVENT_STATUS,
-    PONG;
+    PONG,
+    /** Paper → Velocity: envia jogador de volta ao hub da rede */
+    CONNECT_HUB;
 
     public static ProxyMessageType fromString(String name) {
         try {
