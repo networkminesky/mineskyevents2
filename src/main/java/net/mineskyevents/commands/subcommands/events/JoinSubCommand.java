@@ -52,14 +52,14 @@ public class JoinSubCommand extends SubCommand {
             return;
         }
 
-        if (manager.isPlaying(player)) {
+        if (manager.isPlaying(player) || manager.isSpectating(player)) {
             Messages.send(player, "errors.already-joined");
             return;
         }
 
         BaseEvent activeEvent = manager.getActiveEvent();
         if (activeEvent != null && manager.getState() == EventState.RUNNING) {
-            activeEvent.joinInProgress(player);
+            activeEvent.joinAsSpectator(player);
             return;
         }
 
@@ -68,7 +68,7 @@ public class JoinSubCommand extends SubCommand {
             return;
         }
 
-        Location lobbyLoc = activeEvent.getLobby();
+        Location lobbyLoc = activeEvent.getJoinLocation();
         if (lobbyLoc == null) {
             player.sendMessage("§cLobby não configurado para este mapa.");
             return;
@@ -79,6 +79,7 @@ public class JoinSubCommand extends SubCommand {
 
         player.teleportAsync(lobbyLoc, PlayerTeleportEvent.TeleportCause.PLUGIN).thenAccept(success -> {
             if (success) {
+                activeEvent.prepareForArena(player);
                 Messages.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1.2f);
                 player.getInventory().addItem(EventItems.createBed());
                 player.sendMessage("§aVocê entrou no evento §l" + activeEvent.getEventName() + "§a!");

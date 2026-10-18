@@ -53,14 +53,15 @@ public class CorridaEvent extends BaseEvent {
         if (index != current) return;
 
         checkpointProgress.put(player.getUniqueId(), current + 1);
-
-        if (checkpoints.isEmpty() || current + 1 >= checkpoints.size()) {
-            onFinish(player);
-        }
+        player.sendMessage("§aCheckpoint §f" + (current + 1) + "§a/§f" + checkpoints.size() + " §aconcluído!");
     }
 
     public void onFinish(Player player) {
         if (finishOrder.contains(player)) return;
+        if (!checkpoints.isEmpty()) {
+            int done = checkpointProgress.getOrDefault(player.getUniqueId(), 0);
+            if (done < checkpoints.size()) return;
+        }
         finishOrder.add(player);
 
         if (finishOrder.size() >= 3 || finishOrder.size() >= alivePlayers.size()) {

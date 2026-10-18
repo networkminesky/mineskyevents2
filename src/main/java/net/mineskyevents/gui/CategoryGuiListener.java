@@ -4,6 +4,10 @@ import net.mineskyevents.entities.EventBuilder;
 import net.mineskyevents.entities.categories.Category;
 import net.mineskyevents.entities.categories.CategoryHandler;
 import net.mineskyevents.entities.categories.CategoryOption;
+import net.mineskyevents.map.MapManager;
+import net.mineskyevents.map.WorldEditHelper;
+import net.mineskyevents.utils.Messages;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -141,7 +145,8 @@ public class CategoryGuiListener implements Listener {
                 return;
             }
 
-            if (clicked.getType() == Material.RED_WOOL) {
+            if (clicked.getType() == Material.RED_WOOL && clicked.getItemMeta() != null
+                    && "§cDefinir Canto 1 (Pos 1)".equals(clicked.getItemMeta().getDisplayName())) {
                 MapEditorGui.saveLocation(config, "mapas." + mapId + ".pos1", player.getLocation());
                 category.reloadFile();
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1.0f, 1.0f);
@@ -150,7 +155,8 @@ public class CategoryGuiListener implements Listener {
                 return;
             }
 
-            if (clicked.getType() == Material.BLUE_WOOL) {
+            if (clicked.getType() == Material.BLUE_WOOL && clicked.getItemMeta() != null
+                    && "§bDefinir Canto 2 (Pos 2)".equals(clicked.getItemMeta().getDisplayName())) {
                 MapEditorGui.saveLocation(config, "mapas." + mapId + ".pos2", player.getLocation());
                 category.reloadFile();
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1.0f, 1.0f);
@@ -173,6 +179,99 @@ public class CategoryGuiListener implements Listener {
                 category.reloadFile();
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BIT, 1.0f, 1.0f);
                 player.sendMessage("§a[!] Spawn inicial do evento definido na sua localização atual!");
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+
+            if (clicked.getType() == Material.WOODEN_AXE) {
+                if (!WorldEditHelper.isAvailable() || WorldEditHelper.getSelection(player) == null) {
+                    Messages.send(player, "admin.no-worldedit");
+                    return;
+                }
+                WorldEditHelper.saveSelectionToMap(player, category.getId(), mapId);
+                Messages.send(player, "admin.region-saved", Placeholder.parsed("map", mapId));
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+
+            if (clicked.getType() == Material.GOLD_BLOCK) {
+                MapEditorGui.saveLocation(config, "mapas." + mapId + ".finish", player.getLocation());
+                category.reloadFile();
+                player.sendMessage("§a[!] Linha de chegada definida!");
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+
+            if (clicked.getType() == Material.IRON_BARS) {
+                if (!WorldEditHelper.isAvailable() || WorldEditHelper.getSelection(player) == null) {
+                    Messages.send(player, "admin.no-worldedit");
+                    return;
+                }
+                WorldEditHelper.saveBarrierSelection(player, category.getId(), mapId);
+                Messages.send(player, "admin.barrier-saved", Placeholder.parsed("map", mapId));
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+
+            if (clicked.getType() == Material.LIGHT_WEIGHTED_PRESSURE_PLATE) {
+                if (event.getClick() == ClickType.RIGHT) {
+                    MapManager.clearLocationList(category.getId(), mapId, "checkpoints");
+                    player.sendMessage("§cCheckpoints limpos.");
+                } else {
+                    MapManager.appendLocation(category.getId(), mapId, "checkpoints", player.getLocation());
+                    int count = MapManager.loadCheckpoints(config, mapId).size();
+                    player.sendMessage("§aCheckpoint §f#" + count + " §aadicionado.");
+                }
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+
+            if (clicked.getType() == Material.END_PORTAL_FRAME) {
+                if (event.getClick() == ClickType.RIGHT) {
+                    MapManager.clearLocationList(category.getId(), mapId, "arcos");
+                    player.sendMessage("§cArcos limpos.");
+                } else {
+                    MapManager.appendLocation(category.getId(), mapId, "arcos", player.getLocation());
+                    int count = MapManager.loadArcos(config, mapId).size();
+                    player.sendMessage("§aArco §f#" + count + " §aadicionado.");
+                }
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+
+            if (clicked.getType() == Material.RED_WOOL && clicked.getItemMeta() != null
+                    && clicked.getItemMeta().getDisplayName() != null
+                    && clicked.getItemMeta().getDisplayName().contains("Spawn Time")) {
+                MapEditorGui.saveLocation(config, "mapas." + mapId + ".spawn-time-0", player.getLocation());
+                category.reloadFile();
+                player.sendMessage("§aSpawn do time Vermelho definido!");
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+            if (clicked.getType() == Material.BLUE_WOOL && clicked.getItemMeta() != null
+                    && clicked.getItemMeta().getDisplayName() != null
+                    && clicked.getItemMeta().getDisplayName().contains("Spawn Time")) {
+                MapEditorGui.saveLocation(config, "mapas." + mapId + ".spawn-time-1", player.getLocation());
+                category.reloadFile();
+                player.sendMessage("§aSpawn do time Azul definido!");
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+            if (clicked.getType() == Material.LIME_WOOL && clicked.getItemMeta() != null
+                    && clicked.getItemMeta().getDisplayName() != null
+                    && clicked.getItemMeta().getDisplayName().contains("Spawn Time")) {
+                MapEditorGui.saveLocation(config, "mapas." + mapId + ".spawn-time-2", player.getLocation());
+                category.reloadFile();
+                player.sendMessage("§aSpawn do time Verde definido!");
+                MapEditorGui.open(player, category, mapId);
+                return;
+            }
+            if (clicked.getType() == Material.YELLOW_WOOL && clicked.getItemMeta() != null
+                    && clicked.getItemMeta().getDisplayName() != null
+                    && clicked.getItemMeta().getDisplayName().contains("Spawn Time")) {
+                MapEditorGui.saveLocation(config, "mapas." + mapId + ".spawn-time-3", player.getLocation());
+                category.reloadFile();
+                player.sendMessage("§aSpawn do time Amarelo definido!");
                 MapEditorGui.open(player, category, mapId);
                 return;
             }

@@ -8,9 +8,17 @@ countdown-seconds: 60
 weekend-schedule-enabled: false
 
 proxy:
-  channel: minesky:proxy
   server-name: eventos
   hub-server: lobby
+
+chat:
+  global-bridge:
+    enabled: true
+    server-id: eventos
+    format: "<gray>[g]</gray> <aqua>[Eventos]</aqua> <gray><name></gray><dark_gray>: </dark_gray><message>"
+
+spectator:
+  boundary-margin: 8.0
 
 # Comandos bloqueados para jogadores sem mineskyevents.admin (raiz do comando, sem /)
 blocked-commands:

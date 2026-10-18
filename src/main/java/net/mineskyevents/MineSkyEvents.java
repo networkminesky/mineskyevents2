@@ -1,5 +1,6 @@
 package net.mineskyevents;
 
+import net.mineskyevents.chat.GlobalChatBridge;
 import net.mineskyevents.commands.EventCommand;
 import net.mineskyevents.commands.MSECommand;
 import net.mineskyevents.entities.categories.CategoryHandler;
@@ -35,6 +36,7 @@ public final class MineSkyEvents extends JavaPlugin {
     private ScheduleManager scheduleManager;
     private CommandBlockerListener commandBlockerListener;
     private ProxyService proxyService;
+    private GlobalChatBridge globalChatBridge;
     private RewardService rewardService;
     private EventBanManager banManager;
     private FileConfiguration messagesConfig;
@@ -67,6 +69,11 @@ public final class MineSkyEvents extends JavaPlugin {
         scoreboardManager = new EventScoreboardManager();
         proxyService = new ProxyService(this);
         proxyService.register();
+        Scheduler.runTaskLater(proxyService::register, 100L);
+
+        globalChatBridge = new GlobalChatBridge(this);
+        globalChatBridge.register();
+        Scheduler.runTaskLater(globalChatBridge::register, 100L);
         rewardService = new RewardService(proxyService);
 
         scheduleManager = new ScheduleManager(this, eventManager);
@@ -86,12 +93,15 @@ public final class MineSkyEvents extends JavaPlugin {
             eventManager.forceStop();
         }
         if (proxyService != null) proxyService.unregister();
+        if (globalChatBridge != null) globalChatBridge.unregister();
         l.info("MineSkyEvents desabilitado.");
     }
 
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(), this);
+        getServer().getPluginManager().registerEvents(new net.mineskyevents.listeners.SpectatorListener(), this);
+        getServer().getPluginManager().registerEvents(new net.mineskyevents.listeners.GlobalChatListener(), this);
         getServer().getPluginManager().registerEvents(new CategoryGuiListener(), this);
         commandBlockerListener = new CommandBlockerListener();
         commandBlockerListener.reload();
@@ -117,6 +127,7 @@ public final class MineSkyEvents extends JavaPlugin {
     public EventManager getEventManager() { return eventManager; }
     public EventScoreboardManager getScoreboardManager() { return scoreboardManager; }
     public ProxyService getProxyService() { return proxyService; }
+    public GlobalChatBridge getGlobalChatBridge() { return globalChatBridge; }
     public RewardService getRewardService() { return rewardService; }
     public FileConfiguration getMessagesConfig() { return messagesConfig; }
     public EventBanManager getBanManager() { return banManager; }

@@ -224,6 +224,12 @@ public class EventItems {
                 .build();
     }
 
+    public static boolean isCheckpointPlate(ItemStack item) {
+        if (item == null || item.getType() != Material.LIGHT_WEIGHTED_PRESSURE_PLATE) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && "§e→ CheckPoint".equals(meta.getDisplayName());
+    }
+
     public static ItemStack Plate() {
         return new Builder(Material.LIGHT_WEIGHTED_PRESSURE_PLATE)
                 .name("§e→ CheckPoint")

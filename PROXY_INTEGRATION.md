@@ -1,16 +1,16 @@
 # Integração MineSkyEvents ↔ MineSkyProxy
 
-Este documento descreve como o plugin **MineSkyEvents** (Paper, servidor de eventos) se comunica com o **MineSkyProxy** (Velocity, proxy) via Plugin Messaging.
+Este documento descreve como o plugin **MineSkyEvents** (Paper, servidor de eventos) se comunica com o **MineSkyProxy** (Velocity) via **Mainframe Messaging** (canal `minesky:network`).
 
-## Canal
+O plugin **Mainframe** deve estar instalado no servidor de eventos com messaging habilitado (sem `disable-messaging.txt`).
+
+## Canal Mainframe
 
 ```
-minesky:proxy
+minesky:network
 ```
 
-Registrado nos dois lados:
-- **Velocity**: `channelRegistrar.register(ProxyChannel.IDENTIFIER)`
-- **Paper**: `getServer().getMessenger().registerOutgoingPluginChannel(...)` e `registerIncomingPluginChannel(...)`
+Constantes em `net.mineskyevents.proxy.ProxyChannel` (alinhadas ao `net.mineskyproxy.channel.ProxyChannel` no Velocity).
 
 ## Fluxo geral
 

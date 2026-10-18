@@ -50,6 +50,21 @@ public abstract class BaseEvent {
         return spawnLoc != null ? spawnLoc : lobbyLoc;
     }
 
+    /** Onde o jogador vai ao usar /evento entrar durante as inscrições. */
+    public Location getJoinLocation() {
+        return lobbyLoc;
+    }
+
+    protected boolean teleportsPlayersToSpawnOnCountdown() {
+        return true;
+    }
+
+    protected boolean teleportsPlayersToSpawnOnStart() {
+        return true;
+    }
+
+    protected void onSignupsStarted() {}
+
     private static final Set<Integer> COUNTDOWN_NOTIFY = Set.of(60, 30, 15, 10, 5, 4, 3, 2, 1);
 
     protected final EventType eventType;
@@ -153,6 +168,7 @@ public abstract class BaseEvent {
         MineSkyEvents.getInstance().getProxyService().sendEventStarted(
                 eventType.getId(), mapId, 0);
         MineSkyEvents.getInstance().getScoreboardManager().attach(this);
+        onSignupsStarted();
     }
 
     public void forceStart() {
@@ -163,19 +179,36 @@ public abstract class BaseEvent {
         finishCountdown();
     }
 
-    public void joinInProgress(Player player) {
+    /** Entrada após o início da partida — sempre como espectador. */
+    public void joinAsSpectator(Player player) {
         EventManager manager = getEventManager();
-        manager.addPlayer(player);
-        alivePlayers.add(player.getUniqueId());
+        manager.removePlayer(player);
+        alivePlayers.remove(player.getUniqueId());
         player.getInventory().clear();
-        Location dest = spawnLoc != null ? spawnLoc : lobbyLoc;
-        if (dest != null) {
-            player.teleport(dest, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            player.setFallDistance(0f);
-        }
-        onLateJoin(player);
-        Messages.send(player, "event.joined-late",
+        setSpectator(player);
+        Messages.send(player, "event.joined-spectator",
                 Placeholder.parsed("event", getEventName()));
+    }
+
+    public Location getSpectatorViewLocation() {
+        if (pos1Loc != null && pos2Loc != null && pos1Loc.getWorld() != null) {
+            double minX = Math.min(pos1Loc.getX(), pos2Loc.getX());
+            double maxX = Math.max(pos1Loc.getX(), pos2Loc.getX());
+            double minZ = Math.min(pos1Loc.getZ(), pos2Loc.getZ());
+            double maxZ = Math.max(pos1Loc.getZ(), pos2Loc.getZ());
+            double y = Math.max(pos1Loc.getY(), pos2Loc.getY()) + 4;
+            double x = (minX + maxX) / 2.0;
+            double z = (minZ + maxZ) / 2.0;
+            return new Location(pos1Loc.getWorld(), x, y, z, 0f, 35f);
+        }
+        if (spawnLoc != null) return spawnLoc.clone();
+        return lobbyLoc != null ? lobbyLoc.clone() : null;
+    }
+
+    public void prepareForArena(Player player) {
+        giveKit(player);
+        player.setAllowFlight(false);
+        player.setFlying(false);
     }
 
     protected void onLateJoin(Player player) {
@@ -268,7 +301,9 @@ public abstract class BaseEvent {
             );
             Messages.playSound(p, Sound.BLOCK_NOTE_BLOCK_BANJO, 1.0f);
         }
-        if (seconds == 5) teleportAll(spawnLoc);
+        if (seconds == 5 && teleportsPlayersToSpawnOnCountdown()) {
+            teleportAll(spawnLoc);
+        }
     }
 
     private void finishCountdown() {
@@ -279,7 +314,18 @@ public abstract class BaseEvent {
         alivePlayers.clear();
         alivePlayers.addAll(getEventManager().getActivePlayers());
 
-        teleportAll(spawnLoc);
+        if (teleportsPlayersToSpawnOnStart()) {
+            teleportAll(spawnLoc);
+        }
+
+        for (UUID uuid : getEventManager().getActivePlayers()) {
+            Player p = Bukkit.getPlayer(uuid);
+            if (p != null) {
+                getEventManager().removeSpectator(p);
+                prepareForArena(p);
+            }
+        }
+
         Messages.broadcast("event.started");
         Messages.playToEventPlayers(Sound.BLOCK_NOTE_BLOCK_PLING, 1.2f);
 
@@ -298,10 +344,15 @@ public abstract class BaseEvent {
 
     protected void setSpectator(Player player) {
         player.getInventory().clear();
+        getEventManager().addSpectator(player);
+        Location view = getSpectatorViewLocation();
+        if (view != null) {
+            player.teleport(view, PlayerTeleportEvent.TeleportCause.PLUGIN);
+            player.setFallDistance(0f);
+        }
         player.setGameMode(GameMode.SPECTATOR);
         player.setAllowFlight(true);
         player.setFlying(true);
-        getEventManager().addSpectator(player);
     }
 
     protected void giveKit(Player player) {

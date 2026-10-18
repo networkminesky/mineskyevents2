@@ -70,13 +70,44 @@ public final class MapManager {
     }
 
     public static List<Location> loadCheckpoints(YamlConfiguration config, String mapId) {
+        return loadLocationList(config, mapId, "checkpoints");
+    }
+
+    public static List<Location> loadArcos(YamlConfiguration config, String mapId) {
+        return loadLocationList(config, mapId, "arcos");
+    }
+
+    public static void appendLocation(String categoryId, String mapId, String listKey, Location loc) {
+        Category category = CategoryHandler.getCategoryById(categoryId);
+        if (category == null || loc == null) return;
+
+        YamlConfiguration config = category.getConfig();
+        String path = "mapas." + mapId + "." + listKey;
+        List<String> serialized = new ArrayList<>(config.getStringList(path));
+        serialized.add(serializeLocation(loc));
+        config.set(path, serialized);
+        saveCategory(category);
+    }
+
+    public static void clearLocationList(String categoryId, String mapId, String listKey) {
+        Category category = CategoryHandler.getCategoryById(categoryId);
+        if (category == null) return;
+        category.getConfig().set("mapas." + mapId + "." + listKey, new ArrayList<>());
+        saveCategory(category);
+    }
+
+    public static List<Location> loadLocationList(YamlConfiguration config, String mapId, String listKey) {
         List<Location> result = new ArrayList<>();
-        List<String> raw = config.getStringList("mapas." + mapId + ".checkpoints");
+        List<String> raw = config.getStringList("mapas." + mapId + "." + listKey);
         for (String entry : raw) {
             Location loc = deserializeLocation(entry);
             if (loc != null) result.add(loc);
         }
         return result;
+    }
+
+    public static Location loadTeamSpawn(YamlConfiguration config, String mapId, int teamIndex) {
+        return loadLocation(config, "mapas." + mapId + ".spawn-time-" + teamIndex);
     }
 
     public static Category findCategoryForMap(String mapId) {

@@ -4,11 +4,14 @@ import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.entities.events.*;
 import net.mineskyevents.managers.EventManager;
 import net.mineskyevents.models.EventState;
+import net.mineskyevents.utils.EventItems;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Boat;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Vehicle;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -21,6 +24,9 @@ import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityRegainHealthEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.vehicle.VehicleDestroyEvent;
+import org.bukkit.event.vehicle.VehicleExitEvent;
+import org.bukkit.event.vehicle.VehicleMoveEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -122,8 +128,16 @@ public class GameplayListener implements Listener {
             }
         }
 
-        if (active instanceof CorridaEvent corrida && corrida.isNearFinish(player)) {
-            corrida.onFinish(player);
+        if (active instanceof CorridaEvent corrida) {
+            for (int i = 0; i < active.getCheckpoints().size(); i++) {
+                Location cp = active.getCheckpoints().get(i);
+                if (player.getLocation().distanceSquared(cp) < 16) {
+                    corrida.onCheckpoint(player, i);
+                }
+            }
+            if (corrida.isNearFinish(player)) {
+                corrida.onFinish(player);
+            }
         }
 
         if (active instanceof CorridaBarcoEvent barco && barco.isNearFinish(player)) {
@@ -135,12 +149,54 @@ public class GameplayListener implements Listener {
         }
 
         if (active instanceof CorridaElytraEvent elytra) {
-            for (int i = 0; i < active.getCheckpoints().size(); i++) {
-                Location cp = active.getCheckpoints().get(i);
-                if (player.getLocation().distanceSquared(cp) < 16) {
+            for (int i = 0; i < elytra.getArcos().size(); i++) {
+                Location arco = elytra.getArcos().get(i);
+                if (player.getLocation().distanceSquared(arco) < 36) {
                     elytra.onRingPassed(player, i);
                 }
             }
+            for (int i = 0; i < active.getCheckpoints().size(); i++) {
+                Location cp = active.getCheckpoints().get(i);
+                if (player.getLocation().distanceSquared(cp) < 16) {
+                    elytra.onCheckpointReached(player, i);
+                }
+            }
+            elytra.tryFinish(player);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onVehicleExit(VehicleExitEvent event) {
+        if (!(event.getExited() instanceof Player player)) return;
+        if (manager().getState() != EventState.RUNNING || !manager().isPlaying(player)) return;
+        if (manager().getActiveEvent() instanceof CorridaBarcoEvent barco && barco.isEventBoat(event.getVehicle())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onVehicleDestroy(VehicleDestroyEvent event) {
+        Vehicle vehicle = event.getVehicle();
+        if (!(manager().getActiveEvent() instanceof CorridaBarcoEvent barco)) return;
+        if (barco.isEventBoat(vehicle)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onVehicleMove(VehicleMoveEvent event) {
+        if (!(event.getVehicle() instanceof Boat boat)) return;
+        if (manager().getState() != EventState.RUNNING) return;
+        if (manager().getActiveEvent() instanceof CorridaBarcoEvent barco) {
+            barco.tryBoatJump(boat);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBoatDamage(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Boat boat)) return;
+        if (manager().getActiveEvent() instanceof CorridaBarcoEvent barco && barco.isEventBoat(boat)) {
+            event.setCancelled(true);
         }
     }
 
@@ -270,9 +326,21 @@ public class GameplayListener implements Listener {
         if (!manager().isPlaying(event.getPlayer())) return;
 
         var active = manager().getActiveEvent();
-        if (!(active instanceof TijolaoWarsEvent tijolao)) return;
+        Player player = event.getPlayer();
 
         Action action = event.getAction();
+        if (event.getItem() != null && EventItems.isCheckpointPlate(event.getItem())) {
+            if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+                event.setCancelled(true);
+                if (active instanceof CorridaElytraEvent elytra) {
+                    elytra.teleportToLastCheckpoint(player);
+                }
+            }
+            return;
+        }
+
+        if (!(active instanceof TijolaoWarsEvent tijolao)) return;
+
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK
                 && action != Action.LEFT_CLICK_AIR && action != Action.LEFT_CLICK_BLOCK) {
             return;
@@ -280,7 +348,7 @@ public class GameplayListener implements Listener {
 
         if (event.getItem() != null && event.getItem().getType() == Material.BRICK) {
             event.setCancelled(true);
-            tijolao.tryThrowBrick(event.getPlayer());
+            tijolao.tryThrowBrick(player);
         }
     }
 

@@ -2,11 +2,11 @@ package net.mineskyevents.entities.events;
 
 import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.entities.categories.Category;
-import net.mineskyevents.models.EventState;
+import net.mineskyevents.map.MapBarrierHelper;
 import net.mineskyevents.models.EventType;
 import net.mineskyevents.utils.Scheduler;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -20,12 +20,44 @@ public class EscondeEscondeEvent extends BaseEvent {
     private final Set<UUID> caught = new HashSet<>();
     private Scheduler.Task hideTimer;
 
+    private Location barrierPos1;
+    private Location barrierPos2;
+    private List<MapBarrierHelper.BlockSnapshot> barrierSnapshot = List.of();
+
     public EscondeEscondeEvent(EventType type, Category category, String mapId) {
         super(type, category, mapId);
     }
 
     @Override
+    public Location getJoinLocation() {
+        return spawnLoc != null ? spawnLoc : lobbyLoc;
+    }
+
+    @Override
+    protected boolean teleportsPlayersToSpawnOnCountdown() {
+        return false;
+    }
+
+    @Override
+    protected boolean teleportsPlayersToSpawnOnStart() {
+        return false;
+    }
+
+    @Override
+    protected void onSignupsStarted() {
+        Location[] corners = MapBarrierHelper.loadBarrierCorners(category.getConfig(), mapId);
+        if (corners != null) {
+            barrierPos1 = corners[0];
+            barrierPos2 = corners[1];
+            barrierSnapshot = MapBarrierHelper.placeBarrier(barrierPos1, barrierPos2);
+        }
+    }
+
+    @Override
     protected void onGameStart() {
+        MapBarrierHelper.restoreBarrier(barrierSnapshot);
+        barrierSnapshot = List.of();
+
         List<UUID> players = new ArrayList<>(alivePlayers);
         Collections.shuffle(players);
 
@@ -118,9 +150,10 @@ public class EscondeEscondeEvent extends BaseEvent {
     @Override
     protected void onCleanUp() {
         if (hideTimer != null) hideTimer.cancel();
+        MapBarrierHelper.restoreBarrier(barrierSnapshot);
+        barrierSnapshot = List.of();
         hiders.clear();
         seekers.clear();
         caught.clear();
     }
-
 }

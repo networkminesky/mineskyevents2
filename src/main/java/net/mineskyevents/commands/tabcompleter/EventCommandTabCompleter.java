@@ -46,12 +46,16 @@ public class EventCommandTabCompleter implements TabCompleter {
                 }
             }
             if (sub.equals("mapa") || sub.equals("map")) {
-                if (args.length == 2) return filter(List.of("criar", "ponto", "regiao"), args[1]);
+                if (args.length == 2) return filter(List.of("criar", "ponto", "regiao", "barreira", "checkpoint", "arco"), args[1]);
                 if (args.length == 3) {
                     return filter(Arrays.stream(EventType.values()).map(EventType::getId).collect(Collectors.toList()), args[2]);
                 }
                 if (args.length == 5 && (args[1].equals("ponto") || args[1].equals("point"))) {
-                    return filter(List.of("lobby", "spawn", "pos1", "pos2", "finish", "exit"), args[4]);
+                    return filter(List.of("lobby", "spawn", "pos1", "pos2", "finish", "exit",
+                            "spawn-time-0", "spawn-time-1", "spawn-time-2", "spawn-time-3"), args[4]);
+                }
+                if (args.length == 5 && (args[1].equals("checkpoint") || args[1].equals("cp") || args[1].equals("arco"))) {
+                    return filter(List.of("adicionar", "limpar"), args[4]);
                 }
             }
         }

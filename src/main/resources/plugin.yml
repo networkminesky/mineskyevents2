@@ -10,6 +10,7 @@ description: Servidor dedicado de eventos MineSky com integração ao MineSkyPro
 
 softdepend:
   - WorldEdit
+  - mainframe
 
 commands:
   evento:

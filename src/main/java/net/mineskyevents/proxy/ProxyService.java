@@ -1,26 +1,27 @@
 package net.mineskyevents.proxy;
 
-import com.google.common.io.ByteArrayDataInput;
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
+import net.minesky.api.messaging.Messaging;
+import net.minesky.core.messaging.MessageType;
+import net.minesky.core.messaging.MessagingListener;
+import net.minesky.core.messaging.NetworkMessage;
 import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.models.EventType;
+import org.bson.Document;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.messaging.PluginMessageListener;
 
 import java.util.logging.Logger;
 
 /**
- * Canal de comunicação Plugin Messaging entre MineSkyEvents (Paper) e MineSkyProxy (Velocity).
- * Veja PROXY_INTEGRATION.md para detalhes do protocolo.
+ * Comunicação com o MineSkyProxy via Mainframe Messaging (MongoDB change streams).
+ * Fallback para plugin messaging apenas se o Mainframe não estiver com messaging ativo.
  */
-public class ProxyService implements PluginMessageListener {
-
-    public static final String CHANNEL = "minesky:proxy";
+public class ProxyService {
 
     private final MineSkyEvents plugin;
     private final Logger logger;
+    private MessagingListener mainframeListener;
+    private boolean mainframeActive;
 
     public ProxyService(MineSkyEvents plugin) {
         this.plugin = plugin;
@@ -28,40 +29,80 @@ public class ProxyService implements PluginMessageListener {
     }
 
     public void register() {
-        plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, CHANNEL);
-        plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, CHANNEL, this);
-        logger.info("Canal de proxy registrado: " + CHANNEL);
-    }
+        if (mainframeListener != null) {
+            return;
+        }
+        if (Messaging.hasObserver()) {
+            mainframeListener = new MessagingListener(ProxyChannel.MAIN_CHANNEL) {
+                @Override
+                public void onMessage(String subchannel, String value) {
+                    handleLegacyString(subchannel, value);
+                }
 
-    public void unregister() {
-        plugin.getServer().getMessenger().unregisterOutgoingPluginChannel(plugin, CHANNEL);
-        plugin.getServer().getMessenger().unregisterIncomingPluginChannel(plugin, CHANNEL, this);
-    }
-
-    @Override
-    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
-        if (!CHANNEL.equals(channel)) return;
-
-        ByteArrayDataInput in = ByteStreams.newDataInput(message);
-        String typeStr = in.readUTF();
-        ProxyMessageType type = ProxyMessageType.fromString(typeStr);
-        if (type == null) {
-            logger.warning("Mensagem de proxy desconhecida: " + typeStr);
+                @Override
+                public void onMessage(NetworkMessage message) {
+                    handleNetworkMessage(message);
+                }
+            };
+            Messaging.registerListener("MineSkyEvents", mainframeListener);
+            mainframeActive = true;
+            logger.info("Proxy integrado via Mainframe (canal " + ProxyChannel.MAIN_CHANNEL + ")");
             return;
         }
 
-        switch (type) {
-            case START_EVENT -> handleStartEvent(in);
-            case STOP_EVENT, FORCE_STOP -> plugin.getEventManager().forceStop();
-            case PING -> sendPong();
-            default -> logger.fine("Mensagem de proxy ignorada: " + type);
+        mainframeActive = false;
+        logger.warning("Mainframe messaging indisponível — comandos do proxy (start/stop) não serão recebidos.");
+    }
+
+    public void unregister() {
+        if (mainframeListener != null) {
+            Messaging.unregisterListener(mainframeListener);
+            mainframeListener = null;
         }
     }
 
-    private void handleStartEvent(ByteArrayDataInput in) {
-        String eventId = in.readUTF();
-        String mapId = in.readUTF();
-        boolean manual = in.readBoolean();
+    private void handleNetworkMessage(NetworkMessage message) {
+        String sub = message.subchannel();
+        if (sub == null) return;
+
+        switch (sub) {
+            case ProxyChannel.SUB_START_EVENT -> handleStartEvent(message);
+            case ProxyChannel.SUB_STOP_EVENT -> Bukkit.getScheduler().runTask(plugin, () -> plugin.getEventManager().forceStop());
+            case ProxyChannel.SUB_FORCE_STOP -> Bukkit.getScheduler().runTask(plugin, () -> plugin.getEventManager().forceStop());
+            case ProxyChannel.SUB_PING -> sendPong();
+            default -> logger.fine("Subcanal Mainframe ignorado: " + sub);
+        }
+    }
+
+    private void handleLegacyString(String subchannel, String value) {
+        switch (subchannel) {
+            case ProxyChannel.SUB_STOP_EVENT, ProxyChannel.SUB_FORCE_STOP ->
+                    Bukkit.getScheduler().runTask(plugin, () -> plugin.getEventManager().forceStop());
+            case ProxyChannel.SUB_PING -> sendPong();
+            default -> { }
+        }
+    }
+
+    private void handleStartEvent(NetworkMessage message) {
+        String eventId;
+        String mapId;
+        boolean manual;
+
+        if (message.type() == MessageType.DOCUMENT) {
+            Document doc = message.asDocument();
+            eventId = doc.getString("eventId");
+            mapId = doc.getString("mapId");
+            manual = doc.getBoolean("manual", false);
+        } else {
+            eventId = message.asString();
+            mapId = "";
+            manual = false;
+        }
+
+        if (eventId == null || eventId.isBlank()) {
+            logger.warning("START_EVENT sem eventId válido.");
+            return;
+        }
 
         EventType type = EventType.fromId(eventId);
         if (type == null) {
@@ -69,82 +110,68 @@ public class ProxyService implements PluginMessageListener {
             return;
         }
 
+        String resolvedMap = mapId != null ? mapId : "";
         Bukkit.getScheduler().runTask(plugin, () ->
-                plugin.getEventManager().startEvent(type, mapId, manual));
+                plugin.getEventManager().startEvent(type, resolvedMap.isBlank() ? null : resolvedMap, manual));
     }
 
     public void sendEventStarted(String eventId, String mapId, int playerCount) {
-        send(ProxyMessageType.EVENT_STARTED, out -> {
-            out.writeUTF(eventId);
-            out.writeUTF(mapId);
-            out.writeInt(playerCount);
-        });
+        publish(ProxyChannel.SUB_EVENT_STARTED, MessageType.DOCUMENT, new Document()
+                .append("eventId", eventId)
+                .append("mapId", mapId != null ? mapId : "")
+                .append("playerCount", playerCount));
     }
 
     public void sendEventEnded(String eventId, String mapId) {
-        send(ProxyMessageType.EVENT_ENDED, out -> {
-            out.writeUTF(eventId);
-            out.writeUTF(mapId);
-        });
+        publish(ProxyChannel.SUB_EVENT_ENDED, MessageType.DOCUMENT, new Document()
+                .append("eventId", eventId)
+                .append("mapId", mapId != null ? mapId : ""));
     }
 
     public void sendEventCancelled(String eventId, String reason) {
-        send(ProxyMessageType.EVENT_CANCELLED, out -> {
-            out.writeUTF(eventId);
-            out.writeUTF(reason);
-        });
+        publish(ProxyChannel.SUB_EVENT_CANCELLED, MessageType.DOCUMENT, new Document()
+                .append("eventId", eventId)
+                .append("reason", reason != null ? reason : "unknown"));
     }
 
     public void sendReward(String playerName, int amount, String eventId, int placement) {
-        send(ProxyMessageType.REWARD, out -> {
-            out.writeUTF(playerName);
-            out.writeInt(amount);
-            out.writeUTF(eventId);
-            out.writeInt(placement);
-        });
-        logger.info("Recompensa enviada ao proxy: " + playerName + " +$" + amount + " (" + eventId + ")");
+        publish(ProxyChannel.SUB_REWARD, MessageType.DOCUMENT, new Document()
+                .append("playerName", playerName)
+                .append("amount", amount)
+                .append("eventId", eventId)
+                .append("placement", placement));
+        logger.info("Recompensa publicada no Mainframe: " + playerName + " +$" + amount + " (" + eventId + ")");
     }
 
     public void sendEventStatus(String eventId, String state, int players) {
-        send(ProxyMessageType.EVENT_STATUS, out -> {
-            out.writeUTF(eventId);
-            out.writeUTF(state);
-            out.writeInt(players);
-        });
+        publish(ProxyChannel.SUB_EVENT_STATUS, MessageType.DOCUMENT, new Document()
+                .append("eventId", eventId)
+                .append("state", state)
+                .append("players", players));
+    }
+
+    public void sendPlayerToHub(Player player) {
+        String hub = plugin.getConfig().getString("proxy.hub-server", "lobby");
+        publish(ProxyChannel.SUB_CONNECT_HUB, MessageType.DOCUMENT, new Document()
+                .append("playerName", player.getName())
+                .append("targetServerName", hub));
+        logger.fine("CONNECT_HUB publicado para " + player.getName() + " -> " + hub);
     }
 
     private void sendPong() {
-        send(ProxyMessageType.PONG, out -> out.writeUTF(plugin.getServer().getName()));
+        String serverName = plugin.getConfig().getString("proxy.server-name", plugin.getServer().getName());
+        publish(ProxyChannel.SUB_PONG, MessageType.STRING, serverName);
     }
 
-    /**
-     * Pede ao proxy que mova o jogador para o servidor hub (lobby).
-     */
-    public void sendPlayerToHub(Player player) {
-        String hub = plugin.getConfig().getString("proxy.hub-server", "lobby");
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF(ProxyMessageType.CONNECT_HUB.name());
-        out.writeUTF(player.getName());
-        out.writeUTF(hub);
-        player.sendPluginMessage(plugin, CHANNEL, out.toByteArray());
-        logger.fine("CONNECT_HUB solicitado para " + player.getName() + " -> " + hub);
-    }
-
-    private void send(ProxyMessageType type, MessageWriter writer) {
-        ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF(type.name());
-        writer.write(out);
-
-        Player carrier = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
-        if (carrier != null) {
-            carrier.sendPluginMessage(plugin, CHANNEL, out.toByteArray());
-        } else {
-            logger.warning("Nenhum jogador online para enviar mensagem ao proxy: " + type);
+    private void publish(String subchannel, MessageType type, Object payload) {
+        if (!mainframeActive) {
+            logger.warning("Mainframe inativo — mensagem não enviada: " + subchannel);
+            return;
         }
-    }
-
-    @FunctionalInterface
-    private interface MessageWriter {
-        void write(ByteArrayDataOutput out);
+        try {
+            Messaging.publish(ProxyChannel.MAIN_CHANNEL, subchannel, type, payload);
+        } catch (Exception e) {
+            logger.severe("Falha ao publicar no Mainframe (" + subchannel + "): " + e.getMessage());
+        }
     }
 }

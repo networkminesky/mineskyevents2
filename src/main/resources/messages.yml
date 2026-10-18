@@ -13,6 +13,7 @@ event:
   stopped: "{prefix}<red>O evento foi encerrado por um administrador.</red>"
   left: "{prefix}<yellow>Você saiu do evento. Retornando ao lobby...</yellow>"
   joined-late: "{prefix}<green>Você entrou no evento <white>{event}</white> em andamento.</green>"
+  joined-spectator: "{prefix}<gray>O evento <white>{event}</white> já começou. Você está assistindo como espectador.</gray>"
   kicked: "{prefix}<red>Você foi removido do evento.</red> <gray>Motivo: <white>{reason}</white></gray>"
 
 errors:
@@ -34,6 +35,7 @@ admin:
   map-saved: "{prefix}<green>Ponto <white>{point}</white> salvo no mapa <white>{map}</white>!</green>"
   map-created: "{prefix}<green>Mapa <white>{map}</white> criado para <white>{event}</white>!</green>"
   region-saved: "{prefix}<green>Região do mapa <white>{map}</white> salva via WorldEdit!</green>"
+  barrier-saved: "{prefix}<green>Barreira do mapa <white>{map}</white> salva via WorldEdit!</green>"
   event-started: "{prefix}<green>Evento <white>{event}</white> iniciado no mapa <white>{map}</white>!</green>"
   event-stopped: "{prefix}<yellow>Evento encerrado.</yellow>"
   force-started: "{prefix}<green>Evento iniciado agora. Jogadores foram para a arena.</green>"

@@ -49,7 +49,7 @@ public class PlayerConnectionListener implements Listener {
 
         if (manager.getState() == EventState.RUNNING && manager.getActiveEvent() != null
                 && player.hasPermission("mineskyevents.join")) {
-            manager.getActiveEvent().joinInProgress(player);
+            manager.getActiveEvent().joinAsSpectator(player);
             return;
         }
 

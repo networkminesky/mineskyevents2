@@ -1,11 +1,14 @@
 package net.mineskyevents.entities.events;
 
 import net.mineskyevents.entities.categories.Category;
+import net.mineskyevents.map.MapManager;
 import net.mineskyevents.models.EventType;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 
@@ -44,7 +47,16 @@ public class MiniWarsEvent extends BaseEvent {
             if (p != null) {
                 giveKit(p);
                 giveTeamKit(p, team);
+                teleportToTeamSpawn(p, team);
             }
+        }
+    }
+
+    private void teleportToTeamSpawn(Player player, int team) {
+        Location teamSpawn = MapManager.loadTeamSpawn(category.getConfig(), mapId, team);
+        if (teamSpawn != null) {
+            player.teleport(teamSpawn, PlayerTeleportEvent.TeleportCause.PLUGIN);
+            player.setFallDistance(0f);
         }
     }
 

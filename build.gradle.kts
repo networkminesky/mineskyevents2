@@ -6,6 +6,7 @@ repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
     maven("https://maven.enginehub.org/repo/")
+    maven("https://jitpack.io")
 }
 
 dependencies {
@@ -17,7 +18,7 @@ dependencies {
     compileOnly("com.sk89q.worldedit:worldedit-core:7.3.10") {
         isTransitive = false
     }
-    implementation("org.mongodb:mongodb-driver-sync:5.2.1")
+    compileOnly("com.github.networkminesky.mainframe:mainframe-api:578767c23e")
 }
 
 java {

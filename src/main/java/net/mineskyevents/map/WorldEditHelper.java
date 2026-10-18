@@ -49,4 +49,10 @@ public final class WorldEditHelper {
         MapManager.savePoint(categoryId, mapId, "pos1", corners[0]);
         MapManager.savePoint(categoryId, mapId, "pos2", corners[1]);
     }
+
+    public static void saveBarrierSelection(Player player, String categoryId, String mapId) {
+        Location[] corners = getSelectionCorners(player);
+        if (corners == null) return;
+        MapBarrierHelper.saveBarrierCorners(categoryId, mapId, corners[0], corners[1]);
+    }
 }
