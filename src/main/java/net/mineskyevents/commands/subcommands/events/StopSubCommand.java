@@ -4,7 +4,7 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.commands.subcommands.SubCommand;
 import net.mineskyevents.utils.Messages;
-import org.bukkit.entity.Player;
+import org.bukkit.command.CommandSender;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ public class StopSubCommand extends SubCommand {
     public String getDescription() { return "Encerra o evento ativo."; }
 
     @Override
-    public String getUsage() { return "/evento stop"; }
+    public String getUsage() { return "/event stop"; }
 
     @Override
     public List<String> getAliases() { return List.of("parar", "encerrar"); }
@@ -26,8 +26,11 @@ public class StopSubCommand extends SubCommand {
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
-    public void perform(Player player, String[] args) {
+    public boolean allowsConsole() { return true; }
+
+    @Override
+    public void perform(CommandSender sender, String[] args) {
         MineSkyEvents.getInstance().getEventManager().forceStop();
-        Messages.send(player, "admin.event-stopped");
+        Messages.send(sender, "admin.event-stopped");
     }
 }

@@ -6,10 +6,13 @@ min-players: 2
 signup-timeout-seconds: 600
 countdown-seconds: 60
 weekend-schedule-enabled: false
+# false = desativa agendamento por horário e START_EVENT automático do proxy (/event start continua)
+automatic-events-enabled: true
 
 proxy:
   server-name: eventos
   hub-server: lobby
+  survival-server: survival
 
 chat:
   global-bridge:

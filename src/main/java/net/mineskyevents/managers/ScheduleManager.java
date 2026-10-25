@@ -39,6 +39,7 @@ public class ScheduleManager {
     }
 
     private void tick() {
+        if (!plugin.getConfig().getBoolean("automatic-events-enabled", true)) return;
         if (eventManager.getState() != EventState.INACTIVE) return;
 
         LocalDateTime now = LocalDateTime.now(timezone);

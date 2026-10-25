@@ -4,5 +4,6 @@ public enum EventState {
     INACTIVE,
     WAITING,
     STARTING,
-    RUNNING
+    RUNNING,
+    ENDING
 }

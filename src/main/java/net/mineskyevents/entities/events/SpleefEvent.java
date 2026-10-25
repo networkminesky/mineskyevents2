@@ -47,7 +47,7 @@ public class SpleefEvent extends BaseEvent {
     }
 
     @Override
-    protected void onPlayerEliminated(Player player) {
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {
         // handled by checkWinCondition
     }
 

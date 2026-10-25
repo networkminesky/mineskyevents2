@@ -100,17 +100,20 @@ public final class MineSkyEvents extends JavaPlugin {
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(), this);
         getServer().getPluginManager().registerEvents(new GameplayListener(), this);
+        getServer().getPluginManager().registerEvents(new net.mineskyevents.listeners.MiniWarsCannonListener(), this);
         getServer().getPluginManager().registerEvents(new net.mineskyevents.listeners.SpectatorListener(), this);
         getServer().getPluginManager().registerEvents(new net.mineskyevents.listeners.GlobalChatListener(), this);
         getServer().getPluginManager().registerEvents(new CategoryGuiListener(), this);
+        getServer().getPluginManager().registerEvents(new net.mineskyevents.gui.miniwars.MiniWarsTeamGuiListener(), this);
         commandBlockerListener = new CommandBlockerListener();
         commandBlockerListener.reload();
         getServer().getPluginManager().registerEvents(commandBlockerListener, this);
     }
 
     private void registerCommands() {
-        getCommand("evento").setExecutor(new EventCommand(this));
-        getCommand("evento").setTabCompleter(new net.mineskyevents.commands.tabcompleter.EventCommandTabCompleter());
+        getCommand("event").setExecutor(new EventCommand(this));
+        getCommand("event").setTabCompleter(new net.mineskyevents.commands.tabcompleter.EventCommandTabCompleter());
+
         getCommand("sair").setExecutor(new LeaveCommand());
         getCommand("mse").setExecutor(new MSECommand());
     }

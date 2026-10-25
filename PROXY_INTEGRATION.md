@@ -18,7 +18,7 @@ Constantes em `net.mineskyevents.proxy.ProxyChannel` (alinhadas ao `net.mineskyp
 Jogador no lobby (Velocity)
         │
         ▼
-MineSkyProxy recebe /evento start spleef arena1
+MineSkyProxy recebe /event start spleef arena1
         │
         ▼  Plugin Message (START_EVENT)
 Servidor Paper "eventos" (MineSkyEvents)
@@ -94,10 +94,10 @@ O **MineSkyProxy** deve escutar `REWARD` e creditar o saldo do jogador no banco 
 ## Comandos sugeridos no MineSkyProxy (Velocity)
 
 ```
-/evento start <tipo> [mapa]   → envia START_EVENT ao servidor de eventos
-/evento stop                  → envia STOP_EVENT
-/evento status                → envia PING e exibe resposta
-/evento enviar <jogador>      → envia jogador ao servidor de eventos via Velocity
+/event start <tipo> [mapa]   → envia START_EVENT ao servidor de eventos
+/event stop                  → envia STOP_EVENT
+/event status                → envia PING e exibe resposta
+/event enviar <jogador>      → envia jogador ao servidor de eventos via Velocity
 ```
 
 ## Configuração no Velocity
@@ -132,5 +132,5 @@ Fins de semana desabilitados por padrão (`weekend-schedule-enabled: false`).
 1. Criar plugin Velocity com o canal `minesky:proxy`
 2. Implementar listener de mensagens recebidas (`REWARD`, `EVENT_STARTED`, etc.)
 3. Conectar ao sistema de economia da rede
-4. Implementar comandos `/evento start|stop|status`
+4. Implementar comandos `/event start|stop|status`
 5. Redirecionar jogadores ao servidor `eventos` quando um evento for anunciado

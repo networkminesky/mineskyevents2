@@ -6,6 +6,7 @@ import net.mineskyevents.managers.EventManager;
 import net.mineskyevents.models.EventState;
 import net.mineskyevents.utils.Messages;
 import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public class ForceStartSubCommand extends SubCommand {
     public String getDescription() { return "Força o início do evento (ignora mínimo de jogadores)."; }
 
     @Override
-    public String getUsage() { return "/evento forcestart"; }
+    public String getUsage() { return "/event forcestart"; }
 
     @Override
     public List<String> getAliases() { return List.of("forcar", "forçar"); }
@@ -28,33 +29,38 @@ public class ForceStartSubCommand extends SubCommand {
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
-    public void perform(Player player, String[] args) {
+    public boolean allowsConsole() { return true; }
+
+    @Override
+    public void perform(CommandSender sender, String[] args) {
         EventManager manager = MineSkyEvents.getInstance().getEventManager();
 
         if (!manager.hasActiveEvent()) {
-            Messages.send(player, "errors.no-event");
+            Messages.send(sender, "errors.no-event");
             return;
         }
 
         EventState state = manager.getState();
         if (state == EventState.INACTIVE) {
-            Messages.send(player, "errors.no-event");
+            Messages.send(sender, "errors.no-event");
             return;
         }
 
         if (state == EventState.RUNNING) {
-            player.sendMessage("§eO evento já está em andamento.");
+            sender.sendMessage("§eO evento já está em andamento.");
             return;
         }
 
         var event = manager.getActiveEvent();
         if (event == null) {
-            Messages.send(player, "errors.no-event");
+            Messages.send(sender, "errors.no-event");
             return;
         }
 
         event.forceStart();
-        Messages.send(player, "admin.force-started");
-        Messages.playSound(player, Sound.BLOCK_NOTE_BLOCK_PLING, 1.2f);
+        Messages.send(sender, "admin.force-started");
+        if (sender instanceof Player player) {
+            Messages.playSound(player, Sound.BLOCK_NOTE_BLOCK_PLING, 1.2f);
+        }
     }
 }

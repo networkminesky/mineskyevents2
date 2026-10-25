@@ -9,6 +9,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.entity.Boat;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
@@ -53,11 +54,14 @@ public class CorridaBarcoEvent extends BaseEvent {
         removePlayerBoat(player);
 
         Location boatLoc = base.clone().add(0, 0.1, 0);
-        Boat boat = world.spawn(boatLoc, Boat.class, spawned -> {
-            spawned.setMaxSpeed(0.85);
-            spawned.setOccupiedDeceleration(0.02);
-            spawned.setUnoccupiedDeceleration(0.02);
-        });
+        Entity spawned = world.spawnEntity(boatLoc, EntityType.OAK_BOAT);
+        if (!(spawned instanceof Boat boat)) {
+            spawned.remove();
+            return;
+        }
+        boat.setMaxSpeed(0.85);
+        boat.setOccupiedDeceleration(0.02);
+        boat.setUnoccupiedDeceleration(0.02);
         boat.addPassenger(player);
         playerBoats.put(player.getUniqueId(), boat.getUniqueId());
     }
@@ -114,7 +118,7 @@ public class CorridaBarcoEvent extends BaseEvent {
     }
 
     @Override
-    protected void onPlayerEliminated(Player player) {
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {
         removePlayerBoat(player);
     }
 

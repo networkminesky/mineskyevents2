@@ -23,6 +23,9 @@ public final class EventLeaveHandler {
             return;
         }
 
+        if (manager.isPlaying(player) && manager.getActiveEvent() != null) {
+            manager.getActiveEvent().onParticipantDeparted(player);
+        }
         manager.removePlayer(player);
         manager.removeSpectator(player);
         manager.handleQuit(player);
@@ -40,7 +43,7 @@ public final class EventLeaveHandler {
             player.getInventory().clear();
             player.setGameMode(GameMode.ADVENTURE);
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 0.8f);
-            MineSkyEvents.getInstance().getProxyService().sendPlayerToHub(player);
+            MineSkyEvents.getInstance().getProxyService().sendPlayerToSurvival(player);
         });
 
         Messages.send(player, "event.left");

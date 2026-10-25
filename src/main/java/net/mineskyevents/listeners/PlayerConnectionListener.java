@@ -3,10 +3,11 @@ package net.mineskyevents.listeners;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.mineskyevents.MineSkyEvents;
-import net.mineskyevents.map.MapManager;
 import net.mineskyevents.managers.EventManager;
 import net.mineskyevents.models.EventState;
+import net.mineskyevents.utils.EventJoinHandler;
 import net.mineskyevents.utils.Messages;
+import net.mineskyevents.utils.Scheduler;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -40,10 +41,14 @@ public class PlayerConnectionListener implements Listener {
             return;
         }
 
-        if (!manager.hasActiveEvent() && !player.hasPermission("mineskyevents.bypass")) {
-            String template = MineSkyEvents.getInstance().getMessagesConfig()
-                    .getString("errors.server-closed", "<red>Servidor de eventos fechado.</red>");
-            player.kick(Messages.parse(template));
+        if (!manager.hasActiveEvent()) {
+            if (!player.hasPermission("mineskyevents.bypass")) {
+                String template = MineSkyEvents.getInstance().getMessagesConfig()
+                        .getString("errors.server-closed", "<red>Servidor de eventos fechado.</red>");
+                player.kick(Messages.parse(template));
+                return;
+            }
+            Messages.send(player, "admin.no-active-event");
             return;
         }
 
@@ -53,15 +58,10 @@ public class PlayerConnectionListener implements Listener {
             return;
         }
 
-        if (manager.getState() == EventState.WAITING && player.hasPermission("mineskyevents.join")
+        if ((manager.getState() == EventState.WAITING || manager.getState() == EventState.STARTING)
+                && player.hasPermission("mineskyevents.join")
                 && manager.getActiveEvent() != null) {
-            var active = manager.getActiveEvent();
-            String mapName = MapManager.getMapDisplayName(
-                    net.mineskyevents.entities.categories.CategoryHandler.getCategoryById(active.getEventType().getId()),
-                    active.getMapId());
-            Messages.send(player, "event.announced",
-                    Placeholder.parsed("event", active.getEventName()),
-                    Placeholder.parsed("map", mapName != null ? mapName : active.getMapId()));
+            Scheduler.runTask(() -> EventJoinHandler.join(player));
         }
     }
 

@@ -8,6 +8,7 @@ import net.mineskyevents.map.MapManager;
 import net.mineskyevents.map.WorldEditHelper;
 import net.mineskyevents.models.EventType;
 import net.mineskyevents.utils.Messages;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public class MapSubCommand extends SubCommand {
     public String getDescription() { return "Gerencia mapas de eventos."; }
 
     @Override
-    public String getUsage() { return "/evento mapa <criar|ponto|regiao|checkpoint|arco|barreira> ..."; }
+    public String getUsage() { return "/event mapa <criar|ponto|regiao|checkpoint|arco|barreira> ..."; }
 
     @Override
     public List<String> getAliases() { return List.of("map"); }
@@ -30,7 +31,8 @@ public class MapSubCommand extends SubCommand {
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
-    public void perform(Player player, String[] args) {
+    public void perform(CommandSender sender, String[] args) {
+        Player player = (Player) sender;
         if (args.length < 2) {
             sendHelp(player);
             return;
@@ -51,17 +53,17 @@ public class MapSubCommand extends SubCommand {
 
     private void sendHelp(Player player) {
         player.sendMessage("§cUso: " + getUsage());
-        player.sendMessage("§7  /evento mapa criar <tipo> <id> <nome>");
-        player.sendMessage("§7  /evento mapa ponto <tipo> <id> <lobby|spawn|pos1|pos2|finish|exit|spawn-time-0..3>");
-        player.sendMessage("§7  /evento mapa regiao <tipo> <id>  §8(WorldEdit → pos1/pos2)");
-        player.sendMessage("§7  /evento mapa barreira <tipo> <id>  §8(WorldEdit → parede inicial)");
-        player.sendMessage("§7  /evento mapa checkpoint <tipo> <id> [adicionar|limpar]");
-        player.sendMessage("§7  /evento mapa arco <tipo> <id> [adicionar|limpar]");
+        player.sendMessage("§7  /event mapa criar <tipo> <id> <nome>");
+        player.sendMessage("§7  /event mapa ponto <tipo> <id> <lobby|spawn|pos1|pos2|finish|exit|spawn-time-0..3>");
+        player.sendMessage("§7  /event mapa regiao <tipo> <id>  §8(WorldEdit → pos1/pos2)");
+        player.sendMessage("§7  /event mapa barreira <tipo> <id>  §8(WorldEdit → parede inicial)");
+        player.sendMessage("§7  /event mapa checkpoint <tipo> <id> [adicionar|limpar]");
+        player.sendMessage("§7  /event mapa arco <tipo> <id> [adicionar|limpar]");
     }
 
     private void handleCreate(Player player, String[] args) {
         if (args.length < 5) {
-            player.sendMessage("§cUso: /evento mapa criar <tipo> <id> <nome>");
+            player.sendMessage("§cUso: /event mapa criar <tipo> <id> <nome>");
             return;
         }
         EventType type = EventType.fromId(args[2]);
@@ -79,7 +81,7 @@ public class MapSubCommand extends SubCommand {
 
     private void handlePoint(Player player, String[] args) {
         if (args.length < 5) {
-            player.sendMessage("§cUso: /evento mapa ponto <tipo> <id> <ponto>");
+            player.sendMessage("§cUso: /event mapa ponto <tipo> <id> <ponto>");
             return;
         }
         EventType type = EventType.fromId(args[2]);
@@ -98,7 +100,7 @@ public class MapSubCommand extends SubCommand {
 
     private void handleRegion(Player player, String[] args) {
         if (args.length < 4) {
-            player.sendMessage("§cUso: /evento mapa regiao <tipo> <id>");
+            player.sendMessage("§cUso: /event mapa regiao <tipo> <id>");
             return;
         }
         if (!requireWorldEditSelection(player)) return;
@@ -115,7 +117,7 @@ public class MapSubCommand extends SubCommand {
 
     private void handleBarrier(Player player, String[] args) {
         if (args.length < 4) {
-            player.sendMessage("§cUso: /evento mapa barreira <tipo> <id>");
+            player.sendMessage("§cUso: /event mapa barreira <tipo> <id>");
             return;
         }
         if (!requireWorldEditSelection(player)) return;
@@ -132,7 +134,7 @@ public class MapSubCommand extends SubCommand {
 
     private void handleCheckpoint(Player player, String[] args) {
         if (args.length < 4) {
-            player.sendMessage("§cUso: /evento mapa checkpoint <tipo> <id> [adicionar|limpar]");
+            player.sendMessage("§cUso: /event mapa checkpoint <tipo> <id> [adicionar|limpar]");
             return;
         }
         EventType type = EventType.fromId(args[2]);
@@ -159,7 +161,7 @@ public class MapSubCommand extends SubCommand {
 
     private void handleArco(Player player, String[] args) {
         if (args.length < 4) {
-            player.sendMessage("§cUso: /evento mapa arco <tipo> <id> [adicionar|limpar]");
+            player.sendMessage("§cUso: /event mapa arco <tipo> <id> [adicionar|limpar]");
             return;
         }
         EventType type = EventType.fromId(args[2]);

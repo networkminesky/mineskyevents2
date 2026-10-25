@@ -7,6 +7,7 @@ import net.mineskyevents.map.MapManager;
 import net.mineskyevents.models.EventType;
 import net.mineskyevents.utils.Messages;
 import org.bukkit.Sound;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Arrays;
@@ -21,7 +22,7 @@ public class StartSubCommand extends SubCommand {
     public String getDescription() { return "Inicia um evento manualmente."; }
 
     @Override
-    public String getUsage() { return "/evento start <tipo> [mapa]"; }
+    public String getUsage() { return "/event start <tipo> [mapa]"; }
 
     @Override
     public List<String> getAliases() { return List.of("iniciar"); }
@@ -30,9 +31,12 @@ public class StartSubCommand extends SubCommand {
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
-    public void perform(Player player, String[] args) {
+    public boolean allowsConsole() { return true; }
+
+    @Override
+    public void perform(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            player.sendMessage("§cUso: " + getUsage());
+            sender.sendMessage("§cUso: " + getUsage());
             return;
         }
 
@@ -44,20 +48,28 @@ public class StartSubCommand extends SubCommand {
         }
 
         if (type == null) {
-            Messages.send(player, "errors.map-not-found", Placeholder.parsed("map", args[1]));
+            Messages.send(sender, "errors.map-not-found", Placeholder.parsed("map", args[1]));
             return;
         }
 
         String mapId = args.length >= 3 ? args[2] : MapManager.getRandomMapId(type);
         if (mapId == null) {
-            player.sendMessage("§cNenhum mapa configurado para " + type.getDisplayName());
+            sender.sendMessage("§cNenhum mapa configurado para " + type.getDisplayName());
             return;
         }
 
-        MineSkyEvents.getInstance().getEventManager().startEvent(type, mapId, true);
-        Messages.send(player, "admin.event-started",
+        boolean started = MineSkyEvents.getInstance().getEventManager().startEvent(type, mapId, true);
+        if (!started) {
+            Messages.send(sender, "admin.event-start-failed",
+                    Placeholder.parsed("event", type.getDisplayName()),
+                    Placeholder.parsed("map", mapId));
+            return;
+        }
+        Messages.send(sender, "admin.event-started",
                 Placeholder.parsed("event", type.getDisplayName()),
                 Placeholder.parsed("map", mapId));
-        Messages.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1.0f);
+        if (sender instanceof Player player) {
+            Messages.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1.0f);
+        }
     }
 }

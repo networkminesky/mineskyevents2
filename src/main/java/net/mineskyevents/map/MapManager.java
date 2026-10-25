@@ -57,9 +57,24 @@ public final class MapManager {
         saveCategory(category);
     }
 
+    public static World resolveWorld(String configuredName) {
+        if (configuredName != null && !configuredName.isBlank()) {
+            World world = Bukkit.getWorld(configuredName);
+            if (world != null) return world;
+        }
+        var worlds = Bukkit.getWorlds();
+        if (worlds.size() == 1) {
+            return worlds.get(0);
+        }
+        if (configuredName != null && !configuredName.isBlank()) {
+            MineSkyEvents.l.warning("Mundo '" + configuredName + "' não está carregado.");
+        }
+        return null;
+    }
+
     public static Location loadLocation(YamlConfiguration config, String path) {
         if (!config.contains(path)) return null;
-        World world = Bukkit.getWorld(config.getString(path + ".world", "world"));
+        World world = resolveWorld(config.getString(path + ".world", "world"));
         if (world == null) return null;
         return new Location(world,
                 config.getDouble(path + ".x"),
@@ -110,6 +125,10 @@ public final class MapManager {
         return loadLocation(config, "mapas." + mapId + ".spawn-time-" + teamIndex);
     }
 
+    public static Location loadCannonLocation(YamlConfiguration config, String mapId, int teamIndex) {
+        return loadLocation(config, "mapas." + mapId + ".cannon-" + teamIndex);
+    }
+
     public static Category findCategoryForMap(String mapId) {
         for (Category category : CategoryHandler.categories) {
             if (category.getConfig().contains("mapas." + mapId)) {
@@ -142,7 +161,7 @@ public final class MapManager {
     private static Location deserializeLocation(String raw) {
         String[] parts = raw.split(":");
         if (parts.length < 4) return null;
-        World world = Bukkit.getWorld(parts[0]);
+        World world = resolveWorld(parts[0]);
         if (world == null) return null;
         float yaw = parts.length > 4 ? Float.parseFloat(parts[4]) : 0;
         float pitch = parts.length > 5 ? Float.parseFloat(parts[5]) : 0;

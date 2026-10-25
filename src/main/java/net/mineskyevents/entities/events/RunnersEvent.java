@@ -138,7 +138,7 @@ public class RunnersEvent extends BaseEvent {
     }
 
     @Override
-    protected void onPlayerEliminated(Player player) {}
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {}
 
     @Override
     protected void onCleanUp() {

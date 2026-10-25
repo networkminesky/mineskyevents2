@@ -151,11 +151,23 @@ public class ProxyService {
     }
 
     public void sendPlayerToHub(Player player) {
-        String hub = plugin.getConfig().getString("proxy.hub-server", "lobby");
+        connectPlayerToServer(player, plugin.getConfig().getString("proxy.hub-server", "lobby"));
+    }
+
+    public void sendPlayerToSurvival(Player player) {
+        String survival = plugin.getConfig().getString("proxy.survival-server", "survival");
+        connectPlayerToServer(player, survival);
+    }
+
+    private void connectPlayerToServer(Player player, String targetServer) {
+        if (targetServer == null || targetServer.isBlank()) {
+            logger.warning("Servidor de destino não configurado para " + player.getName());
+            return;
+        }
         publish(ProxyChannel.SUB_CONNECT_HUB, MessageType.DOCUMENT, new Document()
                 .append("playerName", player.getName())
-                .append("targetServerName", hub));
-        logger.fine("CONNECT_HUB publicado para " + player.getName() + " -> " + hub);
+                .append("targetServerName", targetServer));
+        logger.fine("CONNECT_HUB publicado para " + player.getName() + " -> " + targetServer);
     }
 
     private void sendPong() {

@@ -91,7 +91,9 @@ public class EscondeEscondeEvent extends BaseEvent {
                 Player p = Bukkit.getPlayer(uuid);
                 if (p != null) p.removePotionEffect(PotionEffectType.BLINDNESS);
             }
-            Bukkit.broadcastMessage("§e§lOs caçadores foram liberados!");
+            if (!isSilent()) {
+                Bukkit.broadcastMessage("§e§lOs caçadores foram liberados!");
+            }
         }, 200L);
     }
 
@@ -109,7 +111,9 @@ public class EscondeEscondeEvent extends BaseEvent {
                 Player p = Bukkit.getPlayer(uuid);
                 if (p != null) seekerWinners.add(p);
             }
-            MineSkyEvents.getInstance().getRewardService().splitReward(seekerWinners, eventType, alivePlayers.size() + caught.size());
+            if (!isSilent()) {
+                MineSkyEvents.getInstance().getRewardService().splitReward(seekerWinners, eventType, alivePlayers.size() + caught.size());
+            }
             resetEvent();
         }
     }
@@ -135,7 +139,7 @@ public class EscondeEscondeEvent extends BaseEvent {
     }
 
     @Override
-    protected void onPlayerEliminated(Player player) {
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {
         if (seekers.size() == 1 && hiders.contains(player.getUniqueId())) {
             // hider caught - checked in catchPlayer
         }

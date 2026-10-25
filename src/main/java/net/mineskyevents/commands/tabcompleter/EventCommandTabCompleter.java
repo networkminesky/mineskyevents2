@@ -24,15 +24,19 @@ public class EventCommandTabCompleter implements TabCompleter {
 
         if (args.length == 1) {
             List<String> subs = new ArrayList<>(List.of("entrar", "ajuda"));
+            if (sender.hasPermission("mineskyevents.changeteams")) {
+                subs.add("time");
+            }
             if (sender.hasPermission("mineskyevents.admin")) {
-                subs.addAll(List.of("start", "stop", "forcestart", "criar", "mapa", "sair", "kick", "ban", "tempban"));
+                subs.addAll(List.of("start", "silentstart", "stop", "forcestart", "criar", "mapa", "sair", "kick", "ban", "tempban"));
             }
             return filter(subs, args[0]);
         }
 
         if (args.length >= 2 && sender.hasPermission("mineskyevents.admin")) {
             String sub = args[0].toLowerCase();
-            if (sub.equals("start") || sub.equals("iniciar")) {
+            if (sub.equals("start") || sub.equals("iniciar")
+                    || sub.equals("silentstart") || sub.equals("iniciarsilencioso") || sub.equals("startsilent")) {
                 if (args.length == 2) {
                     return filter(Arrays.stream(EventType.values()).map(EventType::getId).collect(Collectors.toList()), args[1]);
                 }

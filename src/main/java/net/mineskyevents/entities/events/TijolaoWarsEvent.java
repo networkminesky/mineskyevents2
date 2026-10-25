@@ -3,12 +3,14 @@ package net.mineskyevents.entities.events;
 import net.kyori.adventure.text.Component;
 import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.entities.categories.Category;
+import net.mineskyevents.models.EventState;
 import net.mineskyevents.models.EventType;
 import net.mineskyevents.utils.Scheduler;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -28,6 +30,7 @@ public class TijolaoWarsEvent extends BaseEvent {
     private final Map<UUID, Long> throwCooldowns = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<FlyingBrick> bricks = new CopyOnWriteArrayList<>();
     private Scheduler.Task brickTask;
+    private Scheduler.Task regenTask;
 
     public TijolaoWarsEvent(EventType type, Category category, String mapId) {
         super(type, category, mapId);
@@ -49,6 +52,24 @@ public class TijolaoWarsEvent extends BaseEvent {
             }
         }
         brickTask = Scheduler.runTaskTimer(this::tickBricks, 1L, 1L);
+        startSlowRegen();
+    }
+
+    private void startSlowRegen() {
+        if (regenTask != null) regenTask.cancel();
+        regenTask = Scheduler.runTaskTimer(() -> {
+            if (getEventManager().getState() != EventState.RUNNING) return;
+            for (UUID uuid : alivePlayers) {
+                Player p = Bukkit.getPlayer(uuid);
+                if (p == null || !p.isOnline()) continue;
+                p.setFoodLevel(20);
+                p.setSaturation(0f);
+                double max = p.getMaxHealth();
+                if (p.getHealth() < max) {
+                    p.setHealth(Math.min(max, p.getHealth() + 0.5));
+                }
+            }
+        }, 40L, 40L);
     }
 
     @Override
@@ -153,23 +174,24 @@ public class TijolaoWarsEvent extends BaseEvent {
         if (shooter.getUniqueId().equals(target.getUniqueId())) return;
 
         double damage = MineSkyEvents.getInstance().getConfig().getDouble("tijolao.brick-damage", 4.0);
-        double newHealth = target.getHealth() - damage;
-        if (newHealth <= 0) {
+        target.setSaturation(0f);
+        target.playSound(target.getLocation(), Sound.ENTITY_ARROW_HIT_PLAYER, 1f, 0.95f);
+        if (target.getHealth() - damage <= 0) {
             eliminatePlayer(target);
         } else {
-            target.setHealth(newHealth);
-            target.setSaturation(0f);
+            target.damage(damage, shooter);
         }
     }
 
     @Override
-    protected void onPlayerEliminated(Player player) {
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {
         throwCooldowns.remove(player.getUniqueId());
     }
 
     @Override
     protected void onCleanUp() {
         if (brickTask != null) brickTask.cancel();
+        if (regenTask != null) regenTask.cancel();
         for (FlyingBrick brick : bricks) {
             if (brick.item != null && brick.item.isValid()) brick.item.remove();
         }

@@ -10,7 +10,6 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 import java.util.List;
-import java.util.Map;
 
 public class RewardService {
 
@@ -25,6 +24,11 @@ public class RewardService {
     }
 
     public void rewardPlacements(List<Player> winners, EventType type, int playerCount) {
+        grantPlacements(winners, type, playerCount);
+    }
+
+    /** Recompensas monetárias via proxy (sem anúncio global de vitória). */
+    public void grantPlacements(List<Player> winners, EventType type, int playerCount) {
         for (int i = 0; i < winners.size(); i++) {
             Player player = winners.get(i);
             if (player == null) continue;
@@ -40,14 +44,6 @@ public class RewardService {
                         Placeholder.parsed("amount", String.valueOf(amount)));
                 Messages.playSound(player, Sound.ENTITY_PLAYER_LEVELUP, 1.2f);
             }
-        }
-
-        if (!winners.isEmpty() && winners.get(0) != null) {
-            Messages.broadcastEvent("event.winner", Map.of(
-                    "event", type.getDisplayName(),
-                    "player", winners.get(0).getName()
-            ));
-            Messages.playToEventPlayers(Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f);
         }
     }
 

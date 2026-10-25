@@ -18,7 +18,11 @@ public class TntRunEvent extends BaseEvent {
     @Override
     public boolean eliminatesOnVoid() { return true; }
 
-    private final Set<Location> scheduledBreaks = new HashSet<>();
+    private static final Set<Material> SURFACE_BLOCKS = Set.of(
+            Material.SAND, Material.RED_SAND, Material.GRAVEL, Material.SUSPICIOUS_SAND, Material.SUSPICIOUS_GRAVEL
+    );
+
+    private final Set<Location> pendingBreaks = new HashSet<>();
     private Scheduler.Task floorTask;
 
     public TntRunEvent(EventType type, Category category, String mapId) {
@@ -32,25 +36,19 @@ public class TntRunEvent extends BaseEvent {
             if (p != null) giveKit(p);
         }
 
-        floorTask = Scheduler.runTaskTimer(this::breakFloors, 10L, 5L);
+        floorTask = Scheduler.runTaskTimer(this::scheduleFloorBreaks, 5L, 2L);
     }
 
-    private void breakFloors() {
+    private void scheduleFloorBreaks() {
         if (MineSkyEvents.getInstance().getEventManager().getState() != EventState.RUNNING) return;
 
         for (UUID uuid : alivePlayers) {
             Player p = Bukkit.getPlayer(uuid);
             if (p == null) continue;
 
-            Location below = p.getLocation().subtract(0, 1, 0);
-            Block block = below.getBlock();
-            if (block.getType() == Material.TNT || block.getType() == Material.SAND) {
-                scheduledBreaks.add(below.clone());
-                Scheduler.runTaskLater(() -> {
-                    if (block.getType() != Material.AIR) {
-                        block.setType(Material.AIR);
-                    }
-                }, 8L);
+            for (int depth = 1; depth <= 2; depth++) {
+                Location blockLoc = p.getLocation().clone().subtract(0, depth, 0).toBlockLocation();
+                scheduleBreak(blockLoc);
             }
 
             if (p.getLocation().getY() < getArenaMinY() - 2) {
@@ -59,11 +57,25 @@ public class TntRunEvent extends BaseEvent {
         }
     }
 
+    private void scheduleBreak(Location blockLoc) {
+        if (!pendingBreaks.add(blockLoc)) return;
+
+        Scheduler.runTaskLater(() -> {
+            pendingBreaks.remove(blockLoc);
+            Block block = blockLoc.getBlock();
+            Material type = block.getType();
+            if (type == Material.TNT || SURFACE_BLOCKS.contains(type)) {
+                block.setType(Material.AIR, false);
+            }
+        }, 7L);
+    }
+
     @Override
-    protected void onPlayerEliminated(Player player) {}
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {}
 
     @Override
     protected void onCleanUp() {
         if (floorTask != null) floorTask.cancel();
+        pendingBreaks.clear();
     }
 }

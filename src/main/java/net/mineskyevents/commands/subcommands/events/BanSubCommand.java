@@ -7,6 +7,7 @@ import net.mineskyevents.commands.subcommands.SubCommand;
 import net.mineskyevents.managers.EventBanManager;
 import net.mineskyevents.utils.Messages;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class BanSubCommand extends SubCommand {
     public String getDescription() { return "Ban permanente de todos os eventos."; }
 
     @Override
-    public String getUsage() { return "/evento ban <jogador> [motivo]"; }
+    public String getUsage() { return "/event ban <jogador> [motivo]"; }
 
     @Override
     public List<String> getAliases() { return List.of(); }
@@ -29,24 +30,28 @@ public class BanSubCommand extends SubCommand {
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
-    public void perform(Player player, String[] args) {
+    public boolean allowsConsole() { return true; }
+
+    @Override
+    public void perform(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            player.sendMessage("§cUso: " + getUsage());
+            sender.sendMessage("§cUso: " + getUsage());
             return;
         }
 
         String reason = EventBanManager.joinReason(args, 2);
         Player target = Bukkit.getPlayerExact(args[1]);
         var bans = MineSkyEvents.getInstance().getBanManager();
+        String staff = sender.getName();
 
         if (target != null) {
-            bans.ban(target.getUniqueId(), target.getName(), reason, player.getName(), -1L);
+            bans.ban(target.getUniqueId(), target.getName(), reason, staff, -1L);
             removeAndKick(target, reason, true, "permanente");
         } else {
-            bans.banByName(args[1], reason, player.getName(), -1L);
+            bans.banByName(args[1], reason, staff, -1L);
         }
 
-        Messages.send(player, "admin.banned",
+        Messages.send(sender, "admin.banned",
                 Placeholder.component("player", Component.text(target != null ? target.getName() : args[1])),
                 Placeholder.component("reason", Component.text(reason)));
     }

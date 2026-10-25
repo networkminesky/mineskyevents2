@@ -13,14 +13,13 @@ softdepend:
   - mainframe
 
 commands:
-  evento:
-    aliases: [event, eventos, events]
+  event:
     description: Comandos de participação nos eventos.
   sair:
-    aliases: [voltar, leave]
-    description: Sai do evento e retorna ao servidor principal.
+    aliases: [voltar, leave, spawn]
+    description: Sai do evento e retorna ao survival.
   mse:
-    aliases: [mineskyevents]
+    aliases: [mineskyevents,msev]
     description: Comandos administrativos do MineSkyEvents.
 
 permissions:
@@ -33,6 +32,12 @@ permissions:
   mineskyevents.admin:
     description: Comandos administrativos de eventos e mapas.
     default: op
+  mineskyevents.changeteams:
+    description: Permite escolher time no Mini Wars antes do início (/event time).
+    default: false
+  mineskyevents.bypassteamlimit:
+    description: Ignora balanceamento e limites ao escolher time no Mini Wars.
+    default: op
   mineskyevents.*:
     description: Todas as permissões do MineSkyEvents.
     default: op
@@ -40,3 +45,5 @@ permissions:
       mineskyevents.join: true
       mineskyevents.bypass: true
       mineskyevents.admin: true
+      mineskyevents.changeteams: true
+      mineskyevents.bypassteamlimit: true

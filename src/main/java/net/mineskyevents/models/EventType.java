@@ -8,7 +8,7 @@ public enum EventType {
 
     SPLEEF("spleef", "Spleef", EventCategory.DAILY,
             "Quebre a neve abaixo dos adversários e seja o último sobrevivente!",
-            2000, 3500, List.of(13, 14, 16, 17, 19)),
+            1500, 2500, List.of(13, 14, 16, 17, 19)),
 
     TIJOLAO_WARS("tijolao-wars", "Tijolão Wars", EventCategory.DAILY,
             "Arremesse tijolos nos adversários e elimine todos os oponentes!",
@@ -20,7 +20,7 @@ public enum EventType {
 
     CORRIDA("corrida", "Corrida", EventCategory.DAILY,
             "Corra até a linha de chegada! Os 3 primeiros colocados ganham prêmios.",
-            2500, 4000, List.of(13, 14, 16, 17, 19)),
+            1500, 2500, List.of(13, 14, 16, 17, 19)),
 
     CORRIDA_BARCO("corrida-barco", "Corrida de Barco", EventCategory.DAILY,
             "Navegue com seu barco no gelo e chegue primeiro ao destino!",
@@ -44,11 +44,11 @@ public enum EventType {
 
     MINI_WARS("mini-wars", "Mini Wars", EventCategory.SCHEDULED,
             "4 times se enfrentam com espadas e bestas. Defenda sua cor!",
-            15000, 30000, List.of(13, 15, 18, 20)),
+            3000, 6000, List.of(13, 15, 18, 20)),
 
     ESCONDE_ESCONDE("esconde-esconde", "Esconde-Esconde", EventCategory.SCHEDULED,
             "Esconda-se dos caçadores ou encontre todos os escondidos!",
-            10000, 25000, List.of(13, 15, 18, 20));
+            3000, 6000, List.of(13, 15, 18, 20));
 
     private static final Set<DayOfWeek> WEEKDAYS = Set.of(
             DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,

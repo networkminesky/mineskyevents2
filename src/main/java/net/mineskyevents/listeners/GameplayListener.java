@@ -149,18 +149,7 @@ public class GameplayListener implements Listener {
         }
 
         if (active instanceof CorridaElytraEvent elytra) {
-            for (int i = 0; i < elytra.getArcos().size(); i++) {
-                Location arco = elytra.getArcos().get(i);
-                if (player.getLocation().distanceSquared(arco) < 36) {
-                    elytra.onRingPassed(player, i);
-                }
-            }
-            for (int i = 0; i < active.getCheckpoints().size(); i++) {
-                Location cp = active.getCheckpoints().get(i);
-                if (player.getLocation().distanceSquared(cp) < 16) {
-                    elytra.onCheckpointReached(player, i);
-                }
-            }
+            elytra.handleMovement(player, event.getFrom(), event.getTo());
             elytra.tryFinish(player);
         }
     }
@@ -213,6 +202,9 @@ public class GameplayListener implements Listener {
         }
 
         if (manager.getState() != EventState.RUNNING || !manager.isPlaying(defender)) {
+            if (manager.getState() == EventState.ENDING) {
+                event.setCancelled(true);
+            }
             return;
         }
 
@@ -222,7 +214,11 @@ public class GameplayListener implements Listener {
         if (event.getCause() == EntityDamageEvent.DamageCause.VOID) {
             event.setCancelled(true);
             if (active.eliminatesOnVoid()) {
-                active.eliminatePlayer(defender);
+                if (active instanceof MiniWarsEvent wars) {
+                    wars.eliminateFromVoid(defender);
+                } else {
+                    active.eliminatePlayer(defender);
+                }
             } else {
                 recoverPlayer(defender, active);
             }
@@ -255,10 +251,19 @@ public class GameplayListener implements Listener {
                 event.setCancelled(true);
                 return;
             }
+            if (manager.isPlaying(attacker)) {
+                wars.applyCannonSeatProtection(defender, event, attacker);
+                wars.onProjectileShieldHit(defender, event);
+                if (!wars.consumeWindDamageMark(defender)) {
+                    wars.recordCombatAttribution(defender, attacker, resolveMiniWarsKillCause(event));
+                }
+            }
         }
 
         if (active instanceof TntTagEvent tag && attacker != null) {
-            tag.transferTag(defender, attacker);
+            if (attacker.getUniqueId().equals(tag.getTaggedPlayer())) {
+                tag.transferTag(attacker, defender);
+            }
             event.setCancelled(true);
             return;
         }
@@ -277,6 +282,19 @@ public class GameplayListener implements Listener {
         if (!active.allowsPlayerVsPlayer()) {
             event.setCancelled(true);
         }
+    }
+
+    private static MiniWarsEvent.KillCause resolveMiniWarsKillCause(EntityDamageByEntityEvent event) {
+        if (event.getDamager() instanceof org.bukkit.entity.Arrow) {
+            return MiniWarsEvent.KillCause.CROSSBOW;
+        }
+        if (event.getDamager() instanceof org.bukkit.entity.Trident) {
+            return MiniWarsEvent.KillCause.CROSSBOW;
+        }
+        if (event.getDamager() instanceof org.bukkit.entity.Projectile) {
+            return MiniWarsEvent.KillCause.CROSSBOW;
+        }
+        return MiniWarsEvent.KillCause.SWORD;
     }
 
     private Player resolveAttacker(EntityDamageByEntityEvent event) {
@@ -298,6 +316,14 @@ public class GameplayListener implements Listener {
         var active = manager().getActiveEvent();
         if (active instanceof TijolaoWarsEvent) {
             event.setCancelled(true);
+            return;
+        }
+        if (active instanceof MiniWarsEvent) {
+            var reason = event.getRegainReason();
+            if (reason == EntityRegainHealthEvent.RegainReason.SATIATED
+                    || reason == EntityRegainHealthEvent.RegainReason.REGEN) {
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -315,7 +341,12 @@ public class GameplayListener implements Listener {
             event.setDeathMessage(null);
             Bukkit.getScheduler().runTask(MineSkyEvents.getInstance(), () -> {
                 player.setHealth(player.getMaxHealth());
-                active.eliminatePlayer(player);
+                Player killer = player.getKiller();
+                EventManager em = manager();
+                if (killer != null && !em.isPlaying(killer)) {
+                    killer = null;
+                }
+                active.eliminatePlayer(player, killer);
             });
         }
     }

@@ -7,7 +7,10 @@ import net.mineskyevents.entities.events.EventFactory;
 import net.mineskyevents.map.MapManager;
 import net.mineskyevents.models.EventState;
 import net.mineskyevents.models.EventType;
+import net.mineskyevents.utils.EventJoinHandler;
 import net.mineskyevents.utils.Messages;
+import net.mineskyevents.utils.Scheduler;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.Collections;
@@ -43,10 +46,19 @@ public class EventManager {
         currentState = EventState.INACTIVE;
     }
 
-    public void startEvent(EventType type, String mapId, boolean manual) {
+    public boolean startEvent(EventType type, String mapId, boolean manual) {
+        return startEvent(type, mapId, manual, false);
+    }
+
+    public boolean startEvent(EventType type, String mapId, boolean manual, boolean silent) {
+        if (!manual && !MineSkyEvents.getInstance().getConfig().getBoolean("automatic-events-enabled", true)) {
+            MineSkyEvents.l.info("Evento automático ignorado (automatic-events-enabled: false): " + type.getDisplayName());
+            return false;
+        }
+
         if (hasActiveEvent()) {
             MineSkyEvents.l.warning("Tentativa de iniciar evento enquanto outro está ativo.");
-            return;
+            return false;
         }
 
         Category category = MapManager.findCategoryForMap(mapId);
@@ -60,22 +72,42 @@ public class EventManager {
 
         if (mapId == null) {
             MineSkyEvents.l.warning("Nenhum mapa disponível para " + type.getId());
-            return;
+            return false;
         }
 
         BaseEvent event = EventFactory.create(type, mapId);
         if (event == null) {
             MineSkyEvents.l.warning("Falha ao criar instância do evento: " + type.getId());
-            return;
+            return false;
         }
 
-        event.startSignups();
-        MineSkyEvents.l.info("Evento iniciado" + (manual ? " (manual)" : " (agendado)") + ": " + type.getDisplayName());
+        event.setSilent(silent);
+        if (!event.startSignups()) {
+            MineSkyEvents.l.warning("Falha ao abrir inscrições para " + type.getId()
+                    + " (mapa " + mapId + "). Verifique lobby/spawn e o mundo carregado.");
+            return false;
+        }
+
+        if (manual) {
+            boolean notifyJoins = !silent;
+            Scheduler.runTask(() -> {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    EventJoinHandler.join(player, notifyJoins);
+                }
+            });
+        }
+
+        String mode = silent ? " (silencioso)" : manual ? " (manual)" : " (agendado)";
+        MineSkyEvents.l.info("Evento iniciado" + mode + ": " + type.getDisplayName() + " · mapa " + mapId);
+        return true;
     }
 
     public void forceStop() {
         if (!hasActiveEvent()) return;
-        Messages.broadcast("event.stopped");
+        if (!activeEvent.isSilent()) {
+            Messages.broadcast("event.stopped");
+        }
+        activeEvent.cancelEndCeremony();
         activeEvent.resetEvent();
     }
 
@@ -109,6 +141,9 @@ public class EventManager {
 
     public void handleQuit(Player player) {
         UUID uuid = player.getUniqueId();
+        if (activePlayers.contains(uuid) && activeEvent != null) {
+            activeEvent.onParticipantDeparted(player);
+        }
         activePlayers.remove(uuid);
         spectators.remove(uuid);
     }

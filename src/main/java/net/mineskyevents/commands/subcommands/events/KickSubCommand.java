@@ -7,6 +7,7 @@ import net.mineskyevents.commands.subcommands.SubCommand;
 import net.mineskyevents.managers.EventBanManager;
 import net.mineskyevents.utils.Messages;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public class KickSubCommand extends SubCommand {
     public String getDescription() { return "Remove um jogador do evento."; }
 
     @Override
-    public String getUsage() { return "/evento kick <jogador> [motivo]"; }
+    public String getUsage() { return "/event kick <jogador> [motivo]"; }
 
     @Override
     public List<String> getAliases() { return List.of(); }
@@ -29,22 +30,25 @@ public class KickSubCommand extends SubCommand {
     public String hasPermission() { return "mineskyevents.admin"; }
 
     @Override
-    public void perform(Player player, String[] args) {
+    public boolean allowsConsole() { return true; }
+
+    @Override
+    public void perform(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            player.sendMessage("§cUso: " + getUsage());
+            sender.sendMessage("§cUso: " + getUsage());
             return;
         }
 
         Player target = Bukkit.getPlayerExact(args[1]);
         if (target == null) {
-            Messages.send(player, "errors.player-offline",
+            Messages.send(sender, "errors.player-offline",
                     Placeholder.component("player", Component.text(args[1])));
             return;
         }
 
         var manager = MineSkyEvents.getInstance().getEventManager();
         if (!manager.isPlaying(target) && !manager.isSpectating(target)) {
-            Messages.send(player, "errors.target-not-in-event",
+            Messages.send(sender, "errors.target-not-in-event",
                     Placeholder.component("player", Component.text(target.getName())));
             return;
         }
@@ -54,7 +58,7 @@ public class KickSubCommand extends SubCommand {
         if (event != null) {
             event.kickFromEvent(target, reason);
         }
-        Messages.send(player, "admin.kicked",
+        Messages.send(sender, "admin.kicked",
                 Placeholder.component("player", Component.text(target.getName())),
                 Placeholder.component("reason", Component.text(reason)));
     }

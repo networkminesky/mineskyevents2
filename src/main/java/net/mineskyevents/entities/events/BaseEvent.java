@@ -10,11 +10,14 @@ import net.mineskyevents.models.EventType;
 import net.mineskyevents.reward.RewardService;
 import net.mineskyevents.utils.Messages;
 import net.mineskyevents.utils.Scheduler;
+import net.mineskyevents.utils.EventCelebration;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.HeightMap;
 import org.bukkit.World;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -50,7 +53,7 @@ public abstract class BaseEvent {
         return spawnLoc != null ? spawnLoc : lobbyLoc;
     }
 
-    /** Onde o jogador vai ao usar /evento entrar durante as inscrições. */
+    /** Onde o jogador vai ao usar /event entrar durante as inscrições. */
     public Location getJoinLocation() {
         return lobbyLoc;
     }
@@ -80,8 +83,19 @@ public abstract class BaseEvent {
     protected final Set<UUID> alivePlayers = ConcurrentHashMap.newKeySet();
     protected final Set<UUID> deadPlayers = ConcurrentHashMap.newKeySet();
 
+    private static final long END_ANNOUNCE_DELAY_TICKS = 80L;
+    private static final long END_DEPARTURE_DELAY_TICKS = 200L;
+
     private Scheduler.Task timeoutTask;
     private Scheduler.Task countdownTask;
+    private Scheduler.Task endAnnounceTask;
+    private Scheduler.Task endShutdownTask;
+    private int finaleParticipantCount;
+    private boolean silent;
+
+    public boolean isSilent() { return silent; }
+
+    public void setSilent(boolean silent) { this.silent = silent; }
 
     public BaseEvent(EventType eventType, Category category, String mapId) {
         this.eventType = eventType;
@@ -90,8 +104,9 @@ public abstract class BaseEvent {
     }
 
     protected abstract void onGameStart();
-    protected abstract void onPlayerEliminated(Player player);
     protected abstract void onCleanUp();
+
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {}
 
     public EventType getEventType() { return eventType; }
     public String getMapId() { return mapId; }
@@ -104,11 +119,16 @@ public abstract class BaseEvent {
     public Set<UUID> getAlivePlayers() { return Collections.unmodifiableSet(alivePlayers); }
 
     public void eliminatePlayer(Player player) {
+        eliminatePlayer(player, null);
+    }
+
+    public void eliminatePlayer(Player player, Player killer) {
         if (!alivePlayers.contains(player.getUniqueId())) return;
         alivePlayers.remove(player.getUniqueId());
         deadPlayers.add(player.getUniqueId());
+        Location deathLocation = player.getLocation().clone();
         setSpectator(player);
-        onPlayerEliminated(player);
+        onPlayerEliminated(player, killer, deathLocation);
         checkWinCondition();
     }
 
@@ -120,20 +140,122 @@ public abstract class BaseEvent {
     }
 
     public void finishEvent(List<Player> winners) {
-        if (getEventManager().getState() == EventState.INACTIVE) return;
+        EventManager manager = getEventManager();
+        if (manager.getState() == EventState.INACTIVE || manager.getState() == EventState.ENDING) return;
 
-        int playerCount = getEventManager().getActivePlayers().size();
-        RewardService rewards = MineSkyEvents.getInstance().getRewardService();
+        manager.setState(EventState.ENDING);
+        cancelEndCeremonyTasks();
+        finaleParticipantCount = manager.getActivePlayers().size() + manager.getSpectators().size();
+        spectateEveryoneForFinale();
 
-        if (!winners.isEmpty()) {
-            rewards.rewardPlacements(winners, eventType, playerCount);
+        spawnVictoryFireworks(winners);
+
+        endAnnounceTask = Scheduler.runTaskLater(() -> announceVictory(winners), END_ANNOUNCE_DELAY_TICKS);
+        endShutdownTask = Scheduler.runTaskLater(() -> completeEventShutdown(winners), END_DEPARTURE_DELAY_TICKS);
+    }
+
+    public void cancelEndCeremony() {
+        cancelEndCeremonyTasks();
+    }
+
+    private void cancelEndCeremonyTasks() {
+        if (endAnnounceTask != null) {
+            endAnnounceTask.cancel();
+            endAnnounceTask = null;
+        }
+        if (endShutdownTask != null) {
+            endShutdownTask.cancel();
+            endShutdownTask = null;
+        }
+    }
+
+    private void spectateEveryoneForFinale() {
+        Set<UUID> participants = new HashSet<>();
+        participants.addAll(getEventManager().getActivePlayers());
+        participants.addAll(getEventManager().getSpectators());
+        participants.addAll(alivePlayers);
+
+        for (UUID uuid : participants) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null || !player.isOnline()) continue;
+            if (getEventManager().isSpectating(player)) continue;
+            setSpectator(player);
+        }
+        for (UUID uuid : new HashSet<>(alivePlayers)) {
+            alivePlayers.remove(uuid);
+        }
+    }
+
+    private void completeEventShutdown(List<Player> winners) {
+        if (getEventManager().getState() != EventState.ENDING) return;
+
+        if (!silent && !winners.isEmpty()) {
+            MineSkyEvents.getInstance().getRewardService().grantPlacements(winners, eventType, finaleParticipantCount);
         }
 
-        MineSkyEvents.getInstance().getProxyService().sendEventEnded(eventType.getId(), mapId);
+        if (!silent) {
+            MineSkyEvents.getInstance().getProxyService().sendEventEnded(eventType.getId(), mapId);
+        }
         resetEvent();
     }
 
-    public void startSignups() {
+    /** Fogos ao encerrar (antes do anúncio no chat). */
+    protected void spawnVictoryFireworks(List<Player> winners) {
+        if (winners.isEmpty() || winners.get(0) == null) return;
+        EventCelebration.spawnFinaleFireworks(this, Color.YELLOW, Color.ORANGE);
+    }
+
+    /** Anúncio de vitória após os fogos. */
+    protected void announceVictory(List<Player> winners) {
+        if (winners.isEmpty() || winners.get(0) == null) return;
+
+        Messages.broadcastEventAudience("event.winner", Map.of(
+                "event", eventType.getDisplayName(),
+                "player", winners.get(0).getName()
+        ));
+        Messages.playToEventAudience(Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f);
+    }
+
+    public World getCelebrationWorld() {
+        if (pos1Loc != null && pos1Loc.getWorld() != null) return pos1Loc.getWorld();
+        if (spawnLoc != null && spawnLoc.getWorld() != null) return spawnLoc.getWorld();
+        if (lobbyLoc != null && lobbyLoc.getWorld() != null) return lobbyLoc.getWorld();
+        return Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
+    }
+
+    public Location randomCelebrationLocation(java.util.random.RandomGenerator random) {
+        World world = getCelebrationWorld();
+        if (world == null) return null;
+
+        if (pos1Loc != null && pos2Loc != null) {
+            double minX = Math.min(pos1Loc.getX(), pos2Loc.getX());
+            double maxX = Math.max(pos1Loc.getX(), pos2Loc.getX());
+            double minZ = Math.min(pos1Loc.getZ(), pos2Loc.getZ());
+            double maxZ = Math.max(pos1Loc.getZ(), pos2Loc.getZ());
+            double x = minX + random.nextDouble() * (maxX - minX);
+            double z = minZ + random.nextDouble() * (maxZ - minZ);
+            double y = fireworkSpawnY(world, x, z, random);
+            return new Location(world, x, y, z);
+        }
+
+        Location center = spawnLoc != null ? spawnLoc : lobbyLoc;
+        if (center == null) {
+            Location spawn = world.getSpawnLocation();
+            return new Location(world, spawn.getX(), fireworkSpawnY(world, spawn.getX(), spawn.getZ(), random), spawn.getZ());
+        }
+        double x = center.getX() + random.nextDouble(-12, 12);
+        double z = center.getZ() + random.nextDouble(-12, 12);
+        double y = fireworkSpawnY(world, x, z, random);
+        return new Location(world, x, y, z);
+    }
+
+    /** Pouco acima do chão real (evita usar o topo da região WorldEdit). */
+    private static double fireworkSpawnY(World world, double x, double z, java.util.random.RandomGenerator random) {
+        int ground = world.getHighestBlockYAt((int) Math.floor(x), (int) Math.floor(z), HeightMap.MOTION_BLOCKING_NO_LEAVES);
+        return ground + 0.55 + random.nextDouble(0, 0.85);
+    }
+
+    public boolean startSignups() {
         YamlConfiguration config = category.getConfig();
         String path = "mapas." + mapId;
 
@@ -144,8 +266,11 @@ public abstract class BaseEvent {
         checkpoints = MapManager.loadCheckpoints(config, mapId);
 
         if (lobbyLoc == null || spawnLoc == null) {
-            Bukkit.getLogger().warning("[" + eventName() + "] Lobby ou spawn não configurados para o mapa " + mapId);
-            return;
+            String missing = lobbyLoc == null && spawnLoc == null ? "lobby e spawn"
+                    : lobbyLoc == null ? "lobby" : "spawn";
+            MineSkyEvents.l.warning("[" + eventName() + "] Ponto(s) ausente(s) (" + missing + ") no mapa "
+                    + mapId + " — configure com /event mapa ou confira o nome do mundo.");
+            return false;
         }
 
         EventManager manager = getEventManager();
@@ -153,22 +278,45 @@ public abstract class BaseEvent {
         manager.setActiveEvent(this);
         manager.setState(EventState.WAITING);
 
-        String mapName = MapManager.getMapDisplayName(category, mapId);
-        Messages.broadcast("event.announced",
-                Placeholder.parsed("event", eventType.getDisplayName()),
-                Placeholder.parsed("map", mapName));
-        Messages.broadcast("event.description",
-                Placeholder.parsed("description", eventType.getDescription()));
-
-        Messages.playToEventPlayers(Sound.ENTITY_ENDER_DRAGON_GROWL, 0.8f);
+        if (!silent) {
+            String mapName = MapManager.getMapDisplayName(category, mapId);
+            Messages.broadcast("event.announced",
+                    Placeholder.parsed("event", eventType.getDisplayName()),
+                    Placeholder.parsed("map", mapName));
+            Messages.broadcast("event.description",
+                    Placeholder.parsed("description", eventType.getDescription()));
+            Messages.playToEventPlayers(Sound.ENTITY_ENDER_DRAGON_GROWL, 0.8f);
+        }
 
         int timeout = MineSkyEvents.getInstance().getConfig().getInt("signup-timeout-seconds", 600);
         timeoutTask = Scheduler.runTaskLater(this::cancelDueToInsufficientPlayers, timeout * 20L);
 
-        MineSkyEvents.getInstance().getProxyService().sendEventStarted(
-                eventType.getId(), mapId, 0);
+        if (!silent) {
+            MineSkyEvents.getInstance().getProxyService().sendEventStarted(
+                    eventType.getId(), mapId, 0);
+        } else {
+            notifySilentSignupsOpen();
+        }
         MineSkyEvents.getInstance().getScoreboardManager().attach(this);
         onSignupsStarted();
+        return true;
+    }
+
+    private void notifySilentSignupsOpen() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player.hasPermission("mineskyevents.join")) {
+                notifySignupStatus(player);
+            }
+        }
+    }
+
+    /** Aviso privado (não broadcast) para quem entra ou já está online durante inscrições. */
+    public void notifySignupStatus(Player player) {
+        String mapLabel = MapManager.getMapDisplayName(category, mapId);
+        String key = silent ? "event.silent-signups" : "event.announced";
+        Messages.send(player, key,
+                Placeholder.parsed("event", getEventName()),
+                Placeholder.parsed("map", mapLabel != null ? mapLabel : mapId));
     }
 
     public void forceStart() {
@@ -216,6 +364,7 @@ public abstract class BaseEvent {
     }
 
     public void staffLeave(Player player) {
+        onParticipantDeparted(player);
         boolean competing = alivePlayers.remove(player.getUniqueId());
         getEventManager().removePlayer(player);
         getEventManager().removeSpectator(player);
@@ -234,10 +383,14 @@ public abstract class BaseEvent {
         String why = reason == null || reason.isBlank() ? "Sem motivo" : reason;
         Messages.send(target, "event.kicked",
                 Placeholder.component("reason", net.kyori.adventure.text.Component.text(why)));
-        MineSkyEvents.getInstance().getProxyService().sendPlayerToHub(target);
+        MineSkyEvents.getInstance().getProxyService().sendPlayerToSurvival(target);
     }
 
+    /** Jogador saiu da fila/partida (lobby, kick, disconnect). */
+    public void onParticipantDeparted(Player player) {}
+
     public void removeFromMatch(Player target) {
+        onParticipantDeparted(target);
         boolean competing = alivePlayers.remove(target.getUniqueId());
         getEventManager().removePlayer(target);
         getEventManager().removeSpectator(target);
@@ -326,7 +479,9 @@ public abstract class BaseEvent {
             }
         }
 
-        Messages.broadcast("event.started");
+        if (!silent) {
+            Messages.broadcast("event.started");
+        }
         Messages.playToEventPlayers(Sound.BLOCK_NOTE_BLOCK_PLING, 1.2f);
 
         onGameStart();
@@ -364,30 +519,37 @@ public abstract class BaseEvent {
     }
 
     private void cancelDueToInsufficientPlayers() {
-        Messages.broadcast("event.cancelled");
-        MineSkyEvents.getInstance().getProxyService().sendEventCancelled(eventType.getId(), "insufficient_players");
+        if (!silent) {
+            Messages.broadcast("event.cancelled");
+            MineSkyEvents.getInstance().getProxyService().sendEventCancelled(eventType.getId(), "insufficient_players");
+        }
         resetEvent();
     }
 
     public void resetEvent() {
         if (timeoutTask != null) timeoutTask.cancel();
         if (countdownTask != null) countdownTask.cancel();
+        cancelEndCeremonyTasks();
 
         World spawnWorld = Bukkit.getWorlds().get(0);
         Location hub = spawnWorld.getSpawnLocation();
+        var proxy = MineSkyEvents.getInstance().getProxyService();
 
-        for (UUID uuid : getEventManager().getActivePlayers()) {
-            Player p = Bukkit.getPlayer(uuid);
-            if (p != null) {
-                p.getInventory().clear();
-                p.setGameMode(GameMode.ADVENTURE);
-                p.teleport(hub, PlayerTeleportEvent.TeleportCause.PLUGIN);
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p == null || !p.isOnline()) continue;
+
+            boolean inEvent = getEventManager().isPlaying(p) || getEventManager().isSpectating(p);
+            if (!inEvent && p.hasPermission("mineskyevents.bypass")) {
+                continue;
             }
-        }
-        for (UUID uuid : getEventManager().getSpectators()) {
-            Player p = Bukkit.getPlayer(uuid);
-            if (p != null) {
-                p.getInventory().clear();
+
+            p.getInventory().clear();
+            if (!p.hasPermission("mineskyevents.bypass")) {
+                proxy.sendPlayerToSurvival(p);
+                continue;
+            }
+
+            if (inEvent) {
                 p.setGameMode(GameMode.ADVENTURE);
                 p.teleport(hub, PlayerTeleportEvent.TeleportCause.PLUGIN);
             }
@@ -416,7 +578,9 @@ public abstract class BaseEvent {
         return Math.min(pos1Loc.getY(), pos2Loc.getY());
     }
 
-    protected EventManager getEventManager() {
+    public Category getCategory() { return category; }
+
+    public EventManager getEventManager() {
         return MineSkyEvents.getInstance().getEventManager();
     }
 

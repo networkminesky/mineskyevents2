@@ -25,6 +25,7 @@ public class EventCommand implements CommandExecutor {
         Arrays.asList(
                 new CreateSubCommand(),
                 new StartSubCommand(),
+                new SilentStartSubCommand(),
                 new StopSubCommand(),
                 new MapSubCommand(),
                 new JoinSubCommand(),
@@ -32,7 +33,8 @@ public class EventCommand implements CommandExecutor {
                 new ForceStartSubCommand(),
                 new KickSubCommand(),
                 new BanSubCommand(),
-                new TempBanSubCommand()
+                new TempBanSubCommand(),
+                new TeamSelectSubCommand()
         ).forEach(subCommands::add);
     }
 
@@ -42,30 +44,36 @@ public class EventCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("Este comando só pode ser usado por jogadores.");
-            return true;
-        }
+        boolean isPlayer = sender instanceof Player;
 
         if (args.length == 0 || args[0].equalsIgnoreCase("help") || args[0].equalsIgnoreCase("ajuda")) {
-            player.sendMessage("§b§lMineSkyEvents §8— Comandos");
-            player.sendMessage("§8────────────────────────────");
+            sender.sendMessage("§b§lMineSkyEvents §8— Comandos");
+            sender.sendMessage("§8────────────────────────────");
             subCommands.stream()
-                    .filter(sub -> player.hasPermission(sub.hasPermission()))
-                    .forEach(sub -> player.sendMessage("§e" + sub.getUsage() + " §8- §7" + sub.getDescription()));
+                    .filter(sub -> sender.hasPermission(sub.hasPermission()))
+                    .filter(sub -> sub.allowsConsole() || isPlayer)
+                    .forEach(sub -> sender.sendMessage("§e" + sub.getUsage() + " §8- §7" + sub.getDescription()));
             return true;
         }
 
         getSubCommand(args[0]).ifPresentOrElse(sub -> {
-            if (!player.hasPermission(sub.hasPermission())) {
-                Messages.send(player, "errors.no-permission");
-                Messages.playSound(player, Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f);
+            if (!sender.hasPermission(sub.hasPermission())) {
+                Messages.send(sender, "errors.no-permission");
+                if (isPlayer) {
+                    Messages.playSound((Player) sender, Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f);
+                }
                 return;
             }
-            sub.perform(player, args);
+            if (!sub.allowsConsole() && !isPlayer) {
+                sender.sendMessage("§cEste comando só pode ser usado por jogadores.");
+                return;
+            }
+            sub.perform(sender, args);
         }, () -> {
-            Messages.send(player, "errors.no-permission");
-            Messages.playSound(player, Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f);
+            Messages.send(sender, "errors.no-permission");
+            if (isPlayer) {
+                Messages.playSound((Player) sender, Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f);
+            }
         });
 
         return true;

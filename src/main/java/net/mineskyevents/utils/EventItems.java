@@ -1,8 +1,10 @@
 package net.mineskyevents.utils;
 
 import net.md_5.bungee.api.ChatColor;
+import net.mineskyevents.MineSkyEvents;
 import net.mineskyevents.config.managers.DataManager;
 import org.bukkit.Color;
+import org.bukkit.NamespacedKey;
 import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -13,6 +15,7 @@ import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.*;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -255,6 +258,42 @@ public class EventItems {
                 .build();
     }
 
+    private static NamespacedKey miniWarsTeamPickerKey() {
+        return new NamespacedKey(MineSkyEvents.getInstance(), "miniwars-team-picker");
+    }
+
+    public static ItemStack createMiniWarsTeamPicker() {
+        ItemStack item = new Builder(Material.COMPASS)
+                .name("§b§l→ Escolher time")
+                .unbreakable()
+                .lore(
+                        "",
+                        "§8| " + ChatColor.of("#76a5af") + "Mini Wars§8:",
+                        ChatColor.of("#a4c2f4") + "  Abre o menu de times.",
+                        "",
+                        ChatColor.of("#ffd966") + "› Clique para abrir"
+                )
+                .build();
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.getPersistentDataContainer().set(miniWarsTeamPickerKey(), PersistentDataType.BYTE, (byte) 1);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    public static boolean isMiniWarsTeamPicker(ItemStack item) {
+        if (item == null || item.getType() != Material.COMPASS) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && meta.getPersistentDataContainer().has(miniWarsTeamPickerKey(), PersistentDataType.BYTE);
+    }
+
+    public static boolean isLeaveBed(ItemStack item) {
+        if (item == null || item.getType() != Material.RED_BED) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && "§c§l→ Clique para sair!".equals(meta.getDisplayName());
+    }
+
     // ferramentas
 
     public static ItemStack flagITEM_Wooden_sword() {
@@ -433,7 +472,7 @@ public class EventItems {
             Location loc = player.getLocation();
 
             List<ItemStack> itemsToDrop = List.of(
-                    Shovel(), Stick(), Boat(), Tnt(), Plate(), createBed(),
+                    Shovel(), Stick(), Boat(), Tnt(), Plate(), createBed(), createMiniWarsTeamPicker(),
                     flagITEM_Wooden_sword(), flagITEM_Stone_sword(), flagITEM_Iron_sword(), flagITEM_Diamond_sword(),
                     flagITEM_Wooden_axe(), flagITEM_Iron_axe(), flagITEM_Golden_axe(), flagITEM_Diamond_axe(),
                     flagITEM_Wooden_pickaxe(), flagITEM_Iron_pickaxe(), flagITEM_Golden_pickaxe(), flagITEM_Diamond_pickaxe(),

@@ -141,6 +141,7 @@ public class EventScoreboardManager {
             case WAITING -> "<gradient:#fbbf24:#f97316>Aguardando</gradient>";
             case STARTING -> "<gradient:#38bdf8:#818cf8>Iniciando</gradient>";
             case RUNNING -> "<gradient:#4ade80:#22d3ee>Ao vivo</gradient>";
+            case ENDING -> "<gradient:#f472b6:#fb7185>Finalizando</gradient>";
             default -> "<gray>—</gray>";
         };
     }

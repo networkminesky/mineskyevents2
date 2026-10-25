@@ -4,6 +4,7 @@ import net.mineskyevents.entities.categories.Category;
 import net.mineskyevents.models.EventType;
 import net.mineskyevents.utils.EventItems;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -35,7 +36,7 @@ public class SumoEvent extends BaseEvent {
     }
 
     @Override
-    protected void onPlayerEliminated(Player player) {}
+    protected void onPlayerEliminated(Player player, Player killer, Location deathLocation) {}
 
     @Override
     protected void onCleanUp() {}
